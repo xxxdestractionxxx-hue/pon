@@ -1,0 +1,1559 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Расчёт PON">
+<title>Расчёт PON</title>
+<style>
+  :root { --bg:#f4f6f8; --surface:#ffffff; --surface2:#eef1f4; --text:#15191e; --dim:#5d6873; --line:#9aa5b1; --accent:#0277BD;
+          --ok:#2EBD6B; --warn:#E39B2B; --bad:#E5484D; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1418; --surface:#171d22; --surface2:#1f272e; --text:#e8edf2; --dim:#94a0ab; --line:#5d6873; --accent:#39C5FF; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg:#0f1418; --surface:#171d22; --surface2:#1f272e; --text:#e8edf2; --dim:#94a0ab; --line:#5d6873; --accent:#39C5FF; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; overflow:hidden; }
+  button { font:inherit; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:8px; padding:5px 10px; cursor:pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.danger { color:var(--bad); }
+  button.mini { padding:1px 6px; font-size:12px; }
+  a.btn { display:inline-flex; align-items:center; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:8px; padding:5px 10px; text-decoration:none; }
+  textarea { font:inherit; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--text); }
+  input { font:inherit; padding:4px 6px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--text); }
+  .sub { color:var(--dim); font-size:12px; }
+  .b { font-weight:700; }
+  .row { display:flex; gap:6px; align-items:center; margin:4px 0; }
+  .row.wrap { flex-wrap:wrap; } .row.end { justify-content:flex-end; margin-top:12px; }
+  aside { width:250px; background:var(--surface); border-right:1px solid var(--surface2); display:flex; flex-direction:column; }
+  aside header { padding:12px; }
+  aside h1 { font-size:18px; margin:0 0 8px; }
+  #list { overflow:auto; flex:1; padding:0 8px 8px; }
+  .item { padding:8px 10px; border-radius:10px; background:var(--surface2); margin:4px 0; cursor:pointer; }
+  .item.active { outline:2px solid var(--accent); }
+  .item .t { font-weight:600; }
+  main { flex:1; display:flex; min-width:0; }
+  #empty { flex:1; align-items:center; justify-content:center; color:var(--dim); font-size:16px; padding:24px; text-align:center; }
+  #work { flex:1; flex-direction:column; min-width:0; }
+  .top { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--surface); border-bottom:1px solid var(--surface2); flex-wrap:wrap; }
+  .top .ttl { flex:1; min-width:150px; }
+  .top .ttl b { font-size:16px; }
+  #fibers { gap:6px; padding:6px 12px; overflow-x:auto; }
+  .chip { border-radius:16px; padding:3px 10px; display:inline-flex; align-items:center; gap:5px; }
+  .chip.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .dot { width:12px; height:12px; border-radius:6px; display:inline-block; border:1px solid var(--line); }
+  .wanted { margin:6px 12px; padding:8px 12px; border-radius:10px; background:var(--surface2); display:flex; gap:10px; align-items:center; }
+  .wanted.ok { background: color-mix(in srgb, var(--ok) 18%, var(--surface)); }
+  .wanted.warn { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); }
+  .wanted.bad { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); }
+  .split-v { flex:1; display:flex; min-height:0; }
+  #canvas { flex:1; background:var(--surface); cursor:crosshair; user-select:none; }
+  #canvas .node { cursor:pointer; }
+  .lb { font-size:12px; fill:var(--text); } .lb.b { font-weight:700; }
+  #panel { width:420px; overflow:auto; padding:12px; background:var(--surface2); border-left:1px solid var(--surface2); }
+  #panel h3 { margin:0 0 6px; } #panel h4 { margin:12px 0 4px; }
+  .fld { display:flex; flex-direction:column; font-size:12px; color:var(--dim); gap:2px; margin:4px 0; }
+  table.tails { border-collapse:collapse; width:100%; font-size:12px; }
+  table.tails td, table.tails th { border-bottom:1px solid var(--line); padding:3px 4px; text-align:left; vertical-align:top; }
+  .splice { overflow:auto; padding:4px 0; }
+  .split { display:flex; align-items:center; }
+  .box { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-radius:8px; padding:4px 8px; white-space:nowrap; }
+  .box.trim { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); }
+  .outs { padding-left:2px; } .port { display:flex; align-items:center; margin:3px 0; white-space:nowrap; }
+  .leaf { background:var(--surface); border-radius:8px; padding:3px 8px; font-weight:600; white-space:nowrap; }
+  .card { background:var(--surface); border-radius:10px; padding:8px 10px; margin-top:10px; }
+  dialog.dlg { border:none; border-radius:14px; padding:16px; background:var(--surface); color:var(--text); min-width:380px; max-width:720px; max-height:85vh; overflow:auto; }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .pick .opt { padding:6px 8px; border-radius:6px; cursor:pointer; } .pick .opt:hover { background:var(--surface2); } .pick .opt.hl { color:var(--ok); font-weight:600; }
+  .tabs { display:flex; gap:2px; padding:0 12px; background:var(--surface); border-bottom:1px solid var(--surface2); }
+  .tab { border:none; border-bottom:3px solid transparent; border-radius:0; background:none; padding:8px 14px; font-weight:600; color:var(--dim); }
+  .tab.on { color:var(--accent); border-bottom-color:var(--accent); }
+  #parts { flex:1; overflow:auto; padding:16px 20px; }
+  table.parts { border-collapse:collapse; min-width:420px; }
+  table.parts td, table.parts th { border-bottom:1px solid var(--line); padding:6px 10px; text-align:left; }
+  table.parts td.big { font-size:18px; font-weight:700; white-space:nowrap; }
+  select { font:inherit; padding:2px 4px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--text); }
+  /* iPhone / телефон в браузере: холст не прокручивает страницу, список схем — отдельным экраном, панель — под схемой */
+  html { height:100%; } body { height:100%; }
+  #canvas { touch-action:none; -webkit-user-select:none; }
+  #btnBack { display:none; }
+  @media (max-width: 820px) {
+    body { flex-direction:column; }
+    main, #work { width:100%; min-width:0; }
+    .wanted { flex-wrap:wrap; }
+    #panel { overflow-x:auto; }
+    aside { width:100%; flex:1; border-right:none; }
+    body.open aside { display:none; }
+    body:not(.open) main { display:none; }
+    #btnBack { display:inline-flex; }
+    .top { padding:6px 8px; gap:4px; }
+    .top button { padding:4px 8px; font-size:13px; }
+    .top .ttl { min-width:100%; order:-1; }
+    .split-v { flex-direction:column; }
+    #canvas { flex:1 1 50%; min-height:42dvh; }
+    #panel { width:100%; max-height:46dvh; border-left:none; border-top:2px solid var(--line); }
+    #panel:empty { display:none; }
+    input, select, textarea { font-size:16px; } /* иначе Safari приближает страницу при вводе */
+    dialog.dlg { min-width:0; width:94vw; max-width:94vw; padding:12px; }
+    .wanted { margin:4px 8px; padding:6px 10px; font-size:13px; }
+    table.parts { min-width:0; width:100%; }
+  }
+  pre.txt { white-space:pre-wrap; font-size:12px; max-height:60vh; overflow:auto; }
+</style>
+</head>
+<body>
+<aside>
+  <header>
+    <h1>Расчёт PON</h1>
+    <div class="sub">GPON 1310 нм · делители по таблице 123.xlsx · цель у абонента −18…−21 дБм</div>
+    <div class="row wrap" style="margin-top:8px">
+      <button class="primary" id="btnNew">Новая схема</button>
+      <button id="btnOpen">Открыть файл</button>
+      <input type="file" id="file" multiple hidden>
+    </div>
+  </header>
+  <div id="list"></div>
+</aside>
+<main>
+  <div id="empty" style="display:flex">Создайте схему или откройте файл схемы слева.</div>
+  <div id="work" style="display:none">
+    <div class="top">
+      <div class="ttl"><button id="btnBack" class="mini">◀ Схемы</button> <b id="title"></b><div id="summary" class="sub"></div></div>
+      <button id="mode" class="chip on">Щелчок — новая муфта</button>
+      <button id="noteMode" class="chip">+ Заметка</button>
+      <button id="fact" class="chip">Режим: как будет</button>
+      <button id="btnFit" class="chip" title="вписать схему в экран">⤢ Вписать</button>
+      <button id="btnText">Текст / Telegram</button>
+      <button id="btnExcel">Excel</button>
+      <button id="btnSave">Сохранить файл</button>
+      <button id="btnSettings">Настройки</button>
+    </div>
+    <div class="tabs"><button id="tabMap" class="tab on">Схема</button><button id="tabParts" class="tab">Список делителей</button></div>
+    <div id="fibers" style="display:none"></div>
+    <div id="wanted" class="wanted"></div>
+    <div id="linkbar" class="wanted warn" style="display:none"></div>
+    <div class="split-v" id="mapView">
+      <svg id="canvas"></svg>
+      <div id="panel"></div>
+    </div>
+    <div id="parts" style="display:none"></div>
+  </div>
+</main>
+<script>
+// Расчёт PON — ядро расчёта (перенесено из Android-приложения ru.opticcalc, Calc.kt / Export.kt).
+// Потери — из таблицы пользователя «123.xlsx»: проход (больший %), отвод (меньший %).
+"use strict";
+
+const FBT = [
+  ["1/99", 0.1, 20], ["2/98", 0.15, 17], ["3/97", 0.3, 15.2], ["4/96", 0.3, 14], ["5/95", 0.3, 13], ["6/94", 0.3, 12],
+  ["7/93", 0.4, 11.5], ["8/92", 0.5, 11], ["9/91", 0.55, 10.6], ["10/90", 0.5, 10], ["11/89", 0.7, 9.7], ["12/88", 0.7, 9.3],
+  ["13/87", 0.7, 8.9], ["14/86", 0.7, 8.6], ["15/85", 0.8, 8.3], ["16/84", 0.8, 8], ["17/83", 0.8, 7.7], ["18/82", 0.9, 7.5],
+  ["19/81", 1, 7.3], ["20/80", 1, 7], ["21/79", 1.1, 6.8], ["22/78", 1.2, 6.6], ["23/77", 1.3, 6.5], ["24/76", 1.4, 6.4],
+  ["25/75", 1.5, 6.3], ["26/74", 1.4, 6], ["27/73", 1.5, 5.8], ["28/72", 1.5, 5.6], ["29/71", 1.7, 5.5], ["30/70", 1.7, 5.4],
+  ["31/69", 1.8, 5.3], ["32/68", 1.8, 5.1], ["33/67", 1.8, 4.9], ["34/66", 1.9, 4.8], ["35/65", 2, 4.7], ["36/64", 2.1, 4.6],
+  ["37/63", 2.1, 4.4], ["38/62", 2.1, 4.2], ["39/61", 2.1, 4.1], ["40/60", 2.2, 4], ["45/55", 2.9, 3.8], ["50/50", 3.6, 3.6],
+];
+const COMMON = new Set(["5/95", "10/90", "15/85", "20/80", "25/75", "30/70", "35/65", "40/60", "45/55", "50/50"]);
+const COUPLERS = FBT.map(([name, thru, tap]) => ({ name, tap, thru, common: COMMON.has(name) }))
+  .concat([{ name: "1x2", tap: 3.8, thru: 3.8, common: true }]);
+const PLC = { "1x2": 3.8, "1x4": 6.8, "1x8": 9.8, "1x16": 12.85, "1x32": 15.85, "1x64": 18.9 };
+const EPS = 1e-9;
+
+// Порядок цветов волокон — как принято у пользователя: 13 цветов, дальше те же со «*» (с полоской)
+const FIBER_SHORT = ["кр", "ор", "жел", "зел", "гол", "син", "фио", "чер", "кор", "сер", "роз", "бел", "нат"];
+const FIBER_NAMES = ["красное", "оранжевое", "жёлтое", "зелёное", "голубое", "синее", "фиолетовое", "чёрное", "коричневое", "серое", "розовое", "белое", "натуральное"];
+const FIBER_RGB = ["#E53935", "#F28C28", "#FDD835", "#2EAA4A", "#4FC3F7", "#1E5FD9", "#8E44AD", "#222222", "#8B5A2B", "#9AA0A6", "#F48FB1", "#F5F5F5", "#E8E2D0"];
+/**
+ * Палитра кабеля: какие цвета волокон в нём есть (индексы 0..12 в порядке выше), сколько модулей,
+ * сколько волокон в модуле и цвета модулей. Отсутствующие цвета пропускаются, после круга — те же со «*».
+ */
+const DEFAULT_CABLE = { colors: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], modules: 1, perModule: 8, moduleColors: [0, 3, 11] };
+let CABLE = DEFAULT_CABLE; // текущая палитра (выставляется для открытой схемы)
+function setCable(c) { CABLE = Object.assign({}, DEFAULT_CABLE, c || {}); if (!CABLE.colors.length) CABLE.colors = DEFAULT_CABLE.colors; }
+/** Цвет волокна №n: [индекс цвета, звёздочки, индекс модуля или -1]. */
+function fiberSlot(n) {
+  const per = CABLE.modules > 1 ? CABLE.perModule : Infinity;
+  const mod = CABLE.modules > 1 ? Math.floor((n - 1) / per) : -1;
+  const k = CABLE.modules > 1 ? (n - 1) % per : n - 1;
+  const cols = CABLE.colors;
+  return [cols[k % cols.length], Math.floor(k / cols.length), mod];
+}
+/** Цвета всех модулей кабеля: заданные по порядку, дальше — как последний (обычно белые). */
+function moduleColorList() {
+  const mc = CABLE.moduleColors && CABLE.moduleColors.length ? CABLE.moduleColors : [11];
+  return Array.from({ length: CABLE.modules }, (_, i) => i < mc.length ? mc[i] : mc[mc.length - 1]);
+}
+/** «кр», «зел», «бел-1», «бел-2» — одинаковые модули различаются номером. */
+function moduleShort(m) {
+  const list = moduleColorList();
+  const c = list[m];
+  const total = list.filter(x => x === c).length;
+  return FIBER_SHORT[c] + (total > 1 ? "-" + (list.slice(0, m + 1).filter(x => x === c).length) : "");
+}
+const fiberShort = n => { const [c, st, m] = fiberSlot(n); return (m >= 0 ? moduleShort(m) + "/" : "") + FIBER_SHORT[c] + "*".repeat(st); };
+const fiberColorName = n => { const [c, st, m] = fiberSlot(n); return (m >= 0 ? `модуль ${moduleShort(m)}, ` : "") + FIBER_NAMES[c] + (st ? " с полоской" + (st > 1 ? " ×" + st : "") : ""); };
+const fiberRgb = n => FIBER_RGB[fiberSlot(n)[0]];
+const fiberName = n => `№${n} ${fiberShort(n)}`;
+
+const dbm = x => (x == null || !isFinite(x)) ? "—" : x.toFixed(1);
+const coupler = name => COUPLERS.find(c => c.name === name) || null;
+const couplerSet = s => s.common ? COUPLERS.filter(c => c.common) : COUPLERS;
+
+// ---------- Типы муфт и состояния — как на рабочей карте ----------
+const KINDS = {
+  a14: { title: "1\\4", abon: "1x4" }, a18: { title: "1\\8", abon: "1x8" }, a12: { title: "1\\2", abon: "1x2" },
+  trunk: { title: "магистраль", abon: null }, cable2: { title: "другой кабель", abon: null }, reserve: { title: "запас", abon: null },
+};
+const STATUSES = {
+  spliced: { title: "сварена", color: "#9C27B0" }, brk: { title: "не сварена / разрыв", color: "#222222" },
+  ring: { title: "кольцо, проходная", color: "#0288D1" }, full: { title: "забита, мест нет", color: "#FF5252" },
+};
+/** Абонентский делитель муфты: по типу, если он задан (кольцо — без абонентов). */
+const abonOf = n => n.status === "ring" ? null : (n.kind && KINDS[n.kind] ? KINDS[n.kind].abon : n.abon);
+
+// ---------- Схема ----------
+const rootOf = s => s.nodes.find(n => n.parent == null) || null;
+const childrenOf = (s, id) => s.nodes.filter(n => n.parent === id);
+const fiberOfNode = n => n.fiber || 1;
+
+/** Волокна с сигналом. Волокно «LOW» (low: true) — в кабеле, но без сигнала, свободное: в расчёт не идёт. */
+function activeFibers(s) {
+  if (!s.multi || !s.fibers || !s.fibers.length) { const r = rootOf(s); return [{ n: 1, input: s.input, trim: r ? r.trim || null : null }]; }
+  const lit = s.fibers.filter(f => !f.low);
+  return (lit.length ? lit : [{ ...s.fibers[0], low: false, input: s.fibers[0].input ?? s.input ?? -5 }]).sort((a, b) => a.n - b.n);
+}
+/** Свободные волокна (LOW). */
+const lowFibers = s => s.multi ? (s.fibers || []).filter(f => f.low).map(f => f.n).sort((a, b) => a - b) : [];
+
+/*
+ * Переварка волокон. По умолчанию в каждой муфте все волокна идут транзитом «цвет в цвет».
+ * node.perm — переварка в муфте-родителе на линию к этой точке: { цвет на приходе в родителя: цвет на этой линии }.
+ * Это всегда перестановка: пустили красное по зелёному — зелёное (сигнал или свободное LOW) пойдёт по красному.
+ */
+/** По какому волокну кабеля (физически, цвет) идёт волокно [f] входа (сигнал или LOW) на линии в точку [id]. */
+function physOn(s, id, f) {
+  const byId = Object.fromEntries(s.nodes.map(n => [n.id, n]));
+  const path = [];
+  for (let n = byId[id]; n && n.parent != null; n = byId[n.parent]) path.unshift(n);
+  let ph = f;
+  for (const n of path) if (n.perm && n.perm[ph] != null) ph = n.perm[ph];
+  return ph;
+}
+/** Волокно [f] входа на линии в точку [id] пустить по волокну [phys]; то, что шло по [phys], пойдёт на его место. */
+function withPhys(s, id, f, phys) {
+  const n = s.nodes.find(x => x.id === id);
+  if (!n || n.parent == null) return s;
+  const a = physOn(s, n.parent, f);
+  const m = { ...(n.perm || {}) };
+  const get = x => m[x] != null ? m[x] : x;
+  // Кто сейчас уходит по [phys] — тот забирает прежний выход [a]
+  let x = null;
+  for (let k = 1; k <= Math.max(s.cable || 1, phys, a); k++) if (get(k) === phys) { x = k; break; }
+  const old = get(a);
+  m[a] = phys;
+  if (x != null && x !== a) m[x] = old;
+  for (const k of Object.keys(m)) if (m[k] === Number(k)) delete m[k];
+  return { ...s, nodes: s.nodes.map(y => y.id === id ? { ...y, perm: m } : y) };
+}
+/** Обратно: какое волокно входа идёт по физическому [ph] на линии в точку [id]. */
+function sourceOf(s, id, ph) {
+  for (let f = 1; f <= Math.max(s.cable || 1, ph); f++) if (physOn(s, id, f) === ph) return f;
+  return ph;
+}
+
+// ---------- Правка соединений ----------
+/** Все точки дальше по веткам от [id]. */
+function subtreeIds(s, id) { return childrenOf(s, id).flatMap(c => [c.id, ...subtreeIds(s, c.id)]); }
+/** Переподключить муфту [id] к точке [to]; ветка едет с ней, изгибы сбрасываются. null — нельзя. */
+function reconnect(s, id, to) {
+  const n = s.nodes.find(x => x.id === id);
+  if (!n || n.parent == null || id === to || subtreeIds(s, id).includes(to) || !s.nodes.some(x => x.id === to)) return null;
+  if (n.parent === to) return s;
+  return { ...s, nodes: s.nodes.map(x => x.id === id ? { ...x, parent: to, bends: [] } : x) };
+}
+/** Свободное имя «М<n>». */
+function nextName(s) {
+  const used = new Set(s.nodes.map(n => n.name));
+  let k = s.nodes.filter(n => n.parent != null).length + 1;
+  while (used.has("М" + k)) k++;
+  return "М" + k;
+}
+/** Новая муфта в середину линии к [childId]; изгибы делятся пополам. */
+function insertOnEdge(s, childId, newId, fiber) {
+  const n = s.nodes.find(x => x.id === childId);
+  const p = n && s.nodes.find(x => x.id === n.parent);
+  if (!p) return null;
+  const bends = n.bends || [];
+  const [mx, my, span] = midCurve(edgePts(p, n));
+  const before = bends.slice(0, 2 * Math.min(span, bends.length / 2)), after = bends.slice(before.length);
+  const m = { id: newId, parent: p.id, x: mx, y: my, name: nextName(s), kind: "a14", status: "spliced", abonCount: 1, fiber: fiber || fiberOfNode(n), bends: before };
+  return { ...s, nodes: [...s.nodes.map(x => x.id === childId ? { ...x, parent: newId, bends: after } : x), m] };
+}
+
+// ---------- Кривые линии: Catmull-Rom → кубические Безье (как в телефоне) ----------
+/** Точки линии плоско: родитель, изгибы, точка. */
+const edgePts = (p, n) => [p.x, p.y, ...(n.bends || []), n.x, n.y];
+function bezCtrl(pts, i) {
+  const k = pts.length / 2, X = j => pts[2 * Math.min(k - 1, Math.max(0, j))], Y = j => pts[2 * Math.min(k - 1, Math.max(0, j)) + 1];
+  return [X(i) + (X(i + 1) - X(i - 1)) / 6, Y(i) + (Y(i + 1) - Y(i - 1)) / 6, X(i + 1) - (X(i + 2) - X(i)) / 6, Y(i + 1) - (Y(i + 2) - Y(i)) / 6];
+}
+function curveD(pts) {
+  let d = `M${pts[0]},${pts[1]}`;
+  for (let i = 0; i < pts.length / 2 - 1; i++) { const c = bezCtrl(pts, i); d += ` C${c[0]},${c[1]} ${c[2]},${c[3]} ${pts[2 * i + 2]},${pts[2 * i + 3]}`; }
+  return d;
+}
+/** Кривая отрезками: [x, y, номер участка]. */
+function sampleCurve(pts, steps = 12) {
+  const out = [[pts[0], pts[1], 0]];
+  for (let i = 0; i < pts.length / 2 - 1; i++) {
+    const c = bezCtrl(pts, i), x0 = pts[2 * i], y0 = pts[2 * i + 1], x3 = pts[2 * i + 2], y3 = pts[2 * i + 3];
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps, u = 1 - t;
+      out.push([u * u * u * x0 + 3 * u * u * t * c[0] + 3 * u * t * t * c[2] + t * t * t * x3, u * u * u * y0 + 3 * u * u * t * c[1] + 3 * u * t * t * c[3] + t * t * t * y3, i]);
+    }
+  }
+  return out;
+}
+/** Середина кривой по длине: [x, y, участок]. */
+function midCurve(pts) {
+  const sm = sampleCurve(pts);
+  const seg = sm.slice(1).map((q, j) => Math.hypot(q[0] - sm[j][0], q[1] - sm[j][1]));
+  let left = seg.reduce((a, b) => a + b, 0) / 2;
+  for (let j = 0; j < seg.length; j++) {
+    if (left <= seg[j] || j === seg.length - 1) {
+      const t = seg[j] ? Math.min(1, Math.max(0, left / seg[j])) : 0, a = sm[j], b = sm[j + 1];
+      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, b[2]];
+    }
+    left -= seg[j];
+  }
+  return [pts[0], pts[1], 0];
+}
+/** Ближайший к (x, y) участок кривой: [номер участка, расстояние]. */
+function nearestSpan(pts, x, y) {
+  const sm = sampleCurve(pts);
+  let best = [0, Infinity];
+  for (let j = 1; j < sm.length; j++) {
+    const ax = sm[j - 1][0], ay = sm[j - 1][1], bx = sm[j][0] - ax, by = sm[j][1] - ay, l2 = bx * bx + by * by;
+    const t = l2 ? Math.min(1, Math.max(0, ((x - ax) * bx + (y - ay) * by) / l2)) : 0;
+    const d = Math.hypot(ax + bx * t - x, ay + by * t - y);
+    if (d < best[1]) best = [sm[j][2], d];
+  }
+  return best;
+}
+const fiberOf = (s, n) => activeFibers(s).find(f => f.n === n) || null;
+
+function withInput(s, f, x) {
+  if (!s.multi) return { ...s, input: x };
+  return { ...s, fibers: s.fibers.map(fb => fb.n === f ? { ...fb, input: x } : fb) };
+}
+function withRootTrim(s, f, code) {
+  if (!s.multi) return { ...s, nodes: s.nodes.map(n => n.parent == null ? { ...n, trim: code } : n) };
+  return { ...s, fibers: s.fibers.map(fb => fb.n === f ? { ...fb, trim: code } : fb) };
+}
+
+// ---------- План распределения ----------
+function mergeOf(c, tap, thru) { return { t: "merge", c, tap, thru, r: Math.max(tap.r + c.tap, thru.r + c.thru) }; }
+
+function bestMerge(a, b, set) {
+  let best = null, bestSpread = Infinity;
+  for (const c of set) for (const [t, h] of [[a, b], [b, a]]) {
+    const m = mergeOf(c, t, h);
+    const spread = Math.abs((t.r + c.tap) - (h.r + c.thru));
+    if (!best || m.r < best.r - EPS || (Math.abs(m.r - best.r) <= EPS && spread < bestSpread)) { best = m; bestSpread = spread; }
+  }
+  return best;
+}
+
+function plan(s, node, f = 1) {
+  // «По факту»: несваренная муфта (разрыв) — дальше сигнала нет
+  if (s.fact && node.parent != null && node.status === "brk") return { nodeId: node.id, plan: null, r: -Infinity };
+  const items = [];
+  const ab = abonOf(node);
+  if (node.parent != null && fiberOfNode(node) === f && PLC[ab] != null) {
+    const k = Math.min(8, Math.max(1, node.abonCount || 1));
+    for (let i = 0; i < k; i++) items.push({ t: "abon", nodeId: node.id, plc: ab, index: k > 1 ? i + 1 : 0, r: PLC[ab] });
+  }
+  for (const ch of childrenOf(s, node.id)) { const np = plan(s, ch, f); if (np.plan) items.push({ t: "line", np, r: np.r }); }
+  const fixed = fiberOfNode(node) === f ? coupler(node.fixed) : null;
+  let p = null;
+  if (items.length === 1) p = items[0];
+  else if (items.length === 2 && fixed) { const [lo, hi] = [...items].sort((x, y) => x.r - y.r); p = mergeOf(fixed, lo, hi); }
+  else if (items.length >= 2) {
+    // Каскад: каждый раз объединяем две «самые лёгкие» нагрузки
+    const pool = [...items].sort((x, y) => x.r - y.r);
+    const set = couplerSet(s);
+    while (pool.length > 1) { const a = pool.shift(), b = pool.shift(); pool.push(bestMerge(a, b, set)); pool.sort((x, y) => x.r - y.r); }
+    p = pool[0];
+  }
+  return { nodeId: node.id, plan: p, r: p ? p.r : -Infinity };
+}
+
+function loads(s, node, f = fiberOfNode(node)) {
+  const own = node.parent != null && fiberOfNode(node) === f && PLC[abonOf(node)] != null ? Math.min(8, Math.max(1, node.abonCount || 1)) : 0;
+  return own + childrenOf(s, node.id).filter(ch => plan(s, ch, f).plan).length;
+}
+
+// ---------- Отщип лишнего ----------
+function trimOf(c, lineOnTap, input) {
+  return { c, lineOnTap, line: input - (lineOnTap ? c.tap : c.thru), reserve: input - (lineOnTap ? c.thru : c.tap),
+    code: c.name + (lineOnTap ? "|T" : "|H") };
+}
+function trimText(t) {
+  if (t.c.name === "1x2") return `1x2: в линию ${dbm(t.line)}, запас ${dbm(t.reserve)} дБм`;
+  return `${t.c.name}: в линию ${t.lineOnTap ? "отвод" : "проход"} (${dbm(t.line)} дБм), ${t.lineOnTap ? "проход" : "отвод"} — в запас/дальше (${dbm(t.reserve)} дБм)`;
+}
+/** Лишнего меньше этого — отщип не предлагаем: не стоит ставить делитель ради долей дБ. */
+const TRIM_MIN_DB = 1.0;
+function chooseTrim(s, input, need) {
+  if (input <= need + s.high + TRIM_MIN_DB + EPS) return null;
+  const ideal = need + (s.low + s.high) / 2, bottom = need + s.low;
+  let best = null;
+  for (const c of couplerSet(s)) for (const onTap of [false, true]) {
+    const t = trimOf(c, onTap, input);
+    if (t.line < bottom - EPS) continue;
+    const d = Math.abs(t.line - ideal);
+    if (!best || d < Math.abs(best.line - ideal) - EPS || (Math.abs(d - Math.abs(best.line - ideal)) <= EPS && t.reserve > best.reserve)) best = t;
+  }
+  return best;
+}
+function parseTrim(code, input) {
+  if (!code) return null;
+  const [name, side] = code.split("|");
+  const c = coupler(name);
+  return c ? trimOf(c, side === "T", input) : null;
+}
+
+// ---------- Разварка ----------
+function pcts(name) { const p = name.split("/"); return p.length === 2 ? [p[0] + "%", p[1] + "%"] : ["50%", "50%"]; }
+
+function spliceLines(sp, indent = "") {
+  if (sp.t === "exit") return [`${indent}→ ${sp.target} (${dbm(sp.level)} дБм)`];
+  if (sp.t === "abon") return [`${indent}→ абонентский ${sp.plc}${sp.index > 0 ? " №" + sp.index : ""}: на абонентах ${dbm(sp.out)} дБм`];
+  const two = sp.name === "1x2";
+  return [`${indent}${sp.trim ? "отщип " : ""}делитель ${sp.name} (вход ${dbm(sp.level)} дБм):`,
+    `${indent}  ${two ? "выход 1" : "отвод"} ${sp.tapPct}:`, ...spliceLines(sp.tapOut, indent + "    "),
+    `${indent}  ${two ? "выход 2" : "проход"} ${sp.thruPct}:`, ...spliceLines(sp.thruOut, indent + "    ")];
+}
+function targetText(sp) {
+  if (sp.t === "abon") return `на абонентский ${sp.plc}${sp.index > 0 ? " №" + sp.index : ""}`;
+  if (sp.t === "exit") return sp.target.startsWith("запас") ? "в запас / дальше" : `на ${sp.target}`;
+  return `на делитель ${sp.name}`;
+}
+/** Хвосты муфты для самопроверки: вход, выходы каждого делителя, выходы абонентских. */
+function tails(input, sp) {
+  const out = [{ label: "Вход в муфту", level: input }];
+  (function go(x) {
+    if (x.t === "split") {
+      const name = (x.trim ? "отщип " : "") + x.name, two = x.name === "1x2";
+      out.push({ label: `${name} ${two ? "выход 1" : "отвод"} ${x.tapPct} → ${targetText(x.tapOut)}`, level: x.level - x.tapLoss });
+      out.push({ label: `${name} ${two ? "выход 2" : "проход"} ${x.thruPct} → ${targetText(x.thruOut)}`, level: x.level - x.thruLoss });
+      go(x.tapOut); go(x.thruOut);
+    } else if (x.t === "abon") {
+      const n = parseInt(x.plc.split("x")[1]) || 1;
+      out.push({ label: `Абонентский ${x.plc}${x.index > 0 ? " №" + x.index : ""}: выходы 1–${n}, каждый`, level: x.out });
+    }
+  })(sp);
+  return out;
+}
+
+// ---------- Расчёт ----------
+function calc(s, f = 1) {
+  const root = rootOf(s);
+  const empty = { nodes: {}, minLevel: null, maxLevel: null, needLow: null, needHigh: null, warnings: [], overflow: null };
+  if (!root) return empty;
+  const fiber = fiberOf(s, f) || { n: f, input: s.input, trim: null };
+  const rootPlan = plan(s, root, f);
+  const out = {};
+  const byId = Object.fromEntries(s.nodes.map(n => [n.id, n]));
+  const label = p => p.t === "abon" ? `абоненты ${p.plc}` : p.t === "line" ? (byId[p.np.nodeId] || {}).name : `делитель ${p.c.name}`;
+
+  function walk(np, rawInput) {
+    const elements = [], shorts = [], abons = [];
+    let abonLevel = null;
+    const node = byId[np.nodeId];
+    const need = isFinite(np.r) ? np.r : null;
+    const hint = need != null ? chooseTrim(s, rawInput, need) : null;
+    const code = node.parent == null ? fiber.trim : (fiberOfNode(node) === f ? node.trim : "none");
+    let trim = null;
+    if (code === "none" || need == null) trim = null;
+    else if (code) trim = parseTrim(code, rawInput);
+    else if (node.parent == null) trim = hint;
+    const input = trim ? trim.line : rawInput;
+    if (trim) { elements.push("отщип " + trimText(trim)); shorts.push("отщип " + trim.c.name); }
+    function go(p, level) {
+      if (p.t === "abon") {
+        const lv = level - p.r; abons.push(lv); abonLevel = abonLevel == null ? lv : Math.min(abonLevel, lv);
+        return { t: "abon", level, plc: p.plc, index: p.index, out: lv };
+      }
+      if (p.t === "line") { walk(p.np, level); return { t: "exit", level, target: byId[p.np.nodeId].name, id: p.np.nodeId }; }
+      shorts.push(p.c.name);
+      elements.push(p.c.name === "1x2" ? `1x2: → ${label(p.tap)} и ${label(p.thru)} (по ${p.c.tap.toFixed(1)} дБ)`
+        : `${p.c.name}: отвод → ${label(p.tap)} (−${p.c.tap.toFixed(2)} дБ), проход → ${label(p.thru)} (−${p.c.thru.toFixed(2)} дБ)`);
+      const [tp, hp] = pcts(p.c.name);
+      return { t: "split", level, name: p.c.name, tapPct: tp, thruPct: hp, tapLoss: p.c.tap, thruLoss: p.c.thru,
+        tapOut: go(p.tap, level - p.c.tap), thruOut: go(p.thru, level - p.c.thru), trim: false };
+    }
+    const inner = np.plan ? go(np.plan, input) : null;
+    let splice = inner;
+    if (trim && inner) {
+      const [tp, hp] = pcts(trim.c.name);
+      const reserve = { t: "exit", level: trim.reserve, target: "запас / дальше" };
+      splice = { t: "split", level: rawInput, name: trim.c.name, tapPct: tp, thruPct: hp, tapLoss: trim.c.tap, thruLoss: trim.c.thru,
+        tapOut: trim.lineOnTap ? inner : reserve, thruOut: trim.lineOnTap ? reserve : inner, trim: true };
+    }
+    out[np.nodeId] = { input: rawInput, abonLevel, elements, short: shorts.join("+"), need, trim,
+      trimHint: (!trim && (node.parent == null || fiberOfNode(node) === f)) ? hint : null, splice, abonLevels: abons };
+  }
+  walk(rootPlan, fiber.input);
+  for (const n of s.nodes) if (!out[n.id]) out[n.id] = { input: null, abonLevel: null, elements: [], short: "", need: null };
+
+  const levels = Object.values(out).map(x => x.abonLevel).filter(x => x != null);
+  const minL = levels.length ? Math.min(...levels) : null, maxL = levels.length ? Math.max(...levels) : null;
+  const r = isFinite(rootPlan.r) ? rootPlan.r : null;
+  const warnings = [];
+  if (minL != null && minL < s.low - EPS) warnings.push(`Не хватает сигнала: худший абонент ${dbm(minL)} дБм, это на ${dbm(s.low - minL)} дБ ниже ${s.low}. Нужен вход не ниже ${dbm((r || 0) + s.low)} дБм или меньше муфт/абонентов на линии.`);
+  if (maxL != null && maxL > s.high + EPS) warnings.push(`Сигнал выше ${s.high} у части абонентов (до ${dbm(maxL)} дБм) — сигнала с запасом, можно подключить больше муфт.`);
+  for (const [id, nr] of Object.entries(out)) {
+    const n = byId[id];
+    if (nr.input == null && n.parent != null && fiberOfNode(n) === f) {
+      if (s.fact && (n.status === "brk" || hasBreakAbove(s, n))) warnings.push(`${n.name}: по факту сигнала нет — до неё не сварено (разрыв).`);
+      else warnings.push(`${n.name}: после неё нет абонентов — сигнал не рассчитан.`);
+    }
+    // Забита — а расчёт просит поставить здесь делитель
+    if (n.status === "full" && nr.short && !n.fixed) warnings.push(`${n.name} забита (мест нет), а здесь нужен делитель ${nr.short} — подумайте о соседней муфте.`);
+    if (n.status === "ring" && nr.splice && nr.splice.t === "split") warnings.push(`${n.name} — кольцо/проходная, а волокно здесь ветвится: нужен делитель ${nr.short}.`);
+  }
+  const overflow = minL != null && minL < s.low - EPS ? suggestCut(s, f, fiber.input) : null;
+  return { nodes: out, minLevel: minL, maxLevel: maxL, needLow: r != null ? r + s.low : null, needHigh: r != null ? r + s.high : null, warnings, overflow };
+}
+function hasBreakAbove(s, n) {
+  const byId = Object.fromEntries(s.nodes.map(x => [x.id, x]));
+  for (let p = byId[n.parent]; p; p = byId[p.parent]) if (p.status === "brk") return true;
+  return false;
+}
+const idealInput = r => (r.needLow != null && r.needHigh != null) ? (r.needLow + r.needHigh) / 2 : null;
+const wanted = (nr, s) => nr && nr.need != null ? [nr.need + s.low, nr.need + s.high] : null;
+
+function calcAll(s) { const m = {}; for (const fb of activeFibers(s)) m[fb.n] = calc(s, fb.n); return m; }
+
+/** Сигнал волокна кончается: с какой муфты перевести хвост на другое волокно (как можно меньше муфт). */
+function suggestCut(s, f, input) {
+  const root = rootOf(s);
+  const subtree = id => childrenOf(s, id).flatMap(c => [c, ...subtree(c.id)]);
+  let best = null;
+  for (const c of s.nodes.filter(n => n.parent != null && fiberOfNode(n) === f)) {
+    const moved = [c, ...subtree(c.id)].filter(n => fiberOfNode(n) === f);
+    if (best && moved.length >= best[1].length) continue;
+    const ids = new Set(moved.map(n => n.id));
+    const trial = { ...s, nodes: s.nodes.map(n => ids.has(n.id) ? { ...n, fiber: -1 } : n) };
+    const need = plan(trial, root, f).r;
+    if (isFinite(need) && input >= need + s.low - EPS) best = [c, moved];
+  }
+  if (!best) return "Сигнала волокна не хватает даже на первую муфту — нужен вход сильнее.";
+  return `Сигнал кончается: муфты с ${best[0].name} дальше (${best[1].map(n => n.name).join(", ")} — ${best[1].length} шт.) переведите на другое волокно, тогда этому хватит.`;
+}
+
+// ---------- Выгрузка ----------
+function ordered(s) {
+  const out = [];
+  (function go(n) { out.push(n); childrenOf(s, n.id).forEach(go); })(rootOf(s));
+  return out;
+}
+
+function textOne(s, r, f, header) {
+  const input = (fiberOf(s, f) || { input: s.input }).input;
+  let t = "";
+  if (header) t += `📡 ${s.title || "Схема"} — GPON, 1310 нм\n`;
+  t += `Вход: ${dbm(input)} дБм · цель у абонента ${dbm(s.high)}…${dbm(s.low)} дБм\n`;
+  if (r.needLow != null) t += `Желаемый вход: ${dbm(r.needLow)}…${dbm(r.needHigh)} дБм, идеально ≈ ${dbm(idealInput(r))}\n`;
+  for (const n of ordered(s).slice(1)) {
+    const nr = r.nodes[n.id];
+    if (!nr || nr.input == null) continue;
+    t += `\n${n.name}`;
+    if (s.multi && fiberOfNode(n) !== f) t += " [транзит/ветвление]";
+    if (s.multi && physOn(s, n.id, f) !== f) t += ` [приходит по ${fiberName(physOn(s, n.id, f))}]`;
+    t += `: вход ${dbm(nr.input)}`;
+    if (nr.short) t += `, делитель ${nr.short}`;
+    if (n.abon && nr.abonLevel != null) t += `, абон. ${n.abon} → ${dbm(nr.abonLevel)} дБм`;
+    if (n.fixed) t += " (вручную)";
+    if (nr.splice && nr.splice.t === "split") for (const x of tails(nr.input, nr.splice).slice(1)) t += `\n   • ${x.label}: ${dbm(x.level)}`;
+  }
+  t += `\n\nУ абонентов: от ${dbm(r.minLevel)} до ${dbm(r.maxLevel)} дБм`;
+  if (r.overflow) t += `\n⚠ ${r.overflow}`;
+  for (const w of r.warnings) t += `\n⚠ ${w}`;
+  return t + "\n";
+}
+function textAll(s, all) {
+  const parts = "\n🧰 Список делителей\n" + partsText(partsList(s, all));
+  if (!s.multi) return textOne(s, all[1] || calc(s), 1, true) + parts;
+  const low = lowFibers(s);
+  return `📡 ${s.title || "Схема"} — GPON 1310 нм, кабель ${s.cable} вол.\n` +
+    activeFibers(s).map(fb => `\n━━ Волокно ${fiberName(fb.n)} ━━\n` + textOne(s, all[fb.n], fb.n, false)).join("\n") +
+    (low.length ? `\nСвободные (LOW): ${low.map(fiberName).join(", ")}\n` : "") + parts;
+}
+
+// ---------- Список делителей ----------
+/** «50/50» → «50\50», «1x4» → «1\4» — как пишут на работе. */
+const partLabel = name => name.replace("/", "\\").replace("x", "\\");
+/**
+ * Все делители по схеме: неравномерные (с отщипами) — из расчёта каждого волокна, абонентские — по муфтам.
+ * [{ name, label, count, where, plc }], по возрастанию: 1/99 … 50/50, потом 1x2, 1x4, 1x8…
+ */
+function partsList(s, all) {
+  const at = new Map();
+  const add = (name, where) => { if (!at.has(name)) at.set(name, new Map()); const m = at.get(name); m.set(where, (m.get(where) || 0) + 1); };
+  for (const n of ordered(s)) {
+    for (const fb of activeFibers(s)) {
+      const nr = all[fb.n] && all[fb.n].nodes[n.id];
+      (function go(x) { if (x && x.t === "split") { add(x.name, n.name); go(x.tapOut); go(x.thruOut); } })(nr && nr.splice);
+    }
+    const ab = abonOf(n);
+    if (n.parent != null && PLC[ab] != null) for (let i = 0; i < Math.min(8, Math.max(1, n.abonCount || 1)); i++) add(ab, n.name);
+  }
+  const order = name => name.includes("/") ? parseFloat(name) : 1000 + (parseFloat(name.split("x")[1]) || 0);
+  return [...at.entries()].sort((a, b) => order(a[0]) - order(b[0])).map(([name, m]) => ({
+    name, label: partLabel(name), plc: !name.includes("/"),
+    count: [...m.values()].reduce((a, b) => a + b, 0),
+    where: [...m.entries()].map(([w, c]) => c > 1 ? `${w} ×${c}` : w).join(", "),
+  }));
+}
+function partsText(list) {
+  if (!list.length) return "Делителей пока нет.\n";
+  let t = "";
+  const fbt = list.filter(p => !p.plc), plc = list.filter(p => p.plc);
+  if (fbt.length) t += "Неравномерные (FBT):\n" + fbt.map(p => `  ${p.label} — ${p.count} шт (${p.where})\n`).join("");
+  if (plc.length) t += "PLC:\n" + plc.map(p => `  ${p.label} — ${p.count} шт (${p.where})\n`).join("");
+  return t + `Всего: ${list.reduce((a, p) => a + p.count, 0)} шт\n`;
+}
+
+function rowsFor(s, r, f) {
+  const names = Object.fromEntries(s.nodes.map(n => [n.id, n.name]));
+  const input = (fiberOf(s, f) || { input: s.input }).input;
+  const rows = [], bold = new Set([0, 2]);
+  rows.push([`${s.title || "Схема"} — GPON 1310 нм${s.multi ? ", волокно " + fiberName(f) : ""}, вход ${dbm(input)} дБм`]);
+  rows.push([]);
+  rows.push(["Муфта", "Откуда", "Сигнал на входе, дБм", "Делитель в муфте", "Абонентский делитель", "Сигнал у абонента, дБм", "Подбор", "Пояснение"]);
+  for (const n of ordered(s).slice(1)) {
+    const nr = r.nodes[n.id];
+    if (!nr || nr.input == null) continue;
+    const mine = !s.multi || fiberOfNode(n) === f;
+    rows.push([n.name, names[n.parent], nr.input, nr.short || "—", mine ? (n.abon || "—") : "транзит", mine ? nr.abonLevel : null,
+      n.fixed && mine ? "вручную" : "авто", nr.elements.join("; ")]);
+  }
+  rows.push([]);
+  rows.push(["Худший абонент, дБм", null, null, null, null, r.minLevel]);
+  rows.push(["Лучший абонент, дБм", null, null, null, null, r.maxLevel]);
+  rows.push([`Нужен вход для ${dbm(s.low)} у худшего, дБм`, null, null, null, null, r.needLow]);
+  if (r.overflow) rows.push([r.overflow]);
+  for (const w of r.warnings) rows.push([w]);
+  rows.push([]);
+  bold.add(rows.length);
+  rows.push(["Схема разварки и сигнал на каждом хвосте (самопроверка)"]);
+  for (const n of ordered(s)) {
+    const nr = r.nodes[n.id];
+    if (!nr || !nr.splice || nr.input == null) continue;
+    bold.add(rows.length);
+    rows.push([n.name, "Хвост", null, null, null, "Должно, дБм", "Замер", "Разница"]);
+    tails(nr.input, nr.splice).forEach((x, i) => {
+      const row = rows.length + 1;
+      rows.push([String(i + 1), x.label, null, null, null, x.level, null, { f: `IF(G${row}="","",G${row}-F${row})` }]);
+    });
+  }
+  return [rows, bold];
+}
+
+// ---------- XLSX без библиотек: zip «store» + CRC32 ----------
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  for (const [name, text] of files) {
+    const nb = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nb.length, true);
+    parts.push(new Uint8Array(h.buffer), nb, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nb.length, true);
+    c.setUint32(42, offset, true);
+    central.push(new Uint8Array(c.buffer), nb);
+    offset += 30 + nb.length + data.length;
+  }
+  const csize = central.reduce((a, b) => a + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, csize, true); e.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+const xesc = x => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function xlsxBlob(rows, bold, widths) {
+  let sd = "";
+  rows.forEach((row, i) => {
+    const r = i + 1, st = bold.has(i) ? 1 : 0;
+    sd += `<row r="${r}">`;
+    row.forEach((v, c) => {
+      const ref = String.fromCharCode(65 + c) + r;
+      if (v == null) return;
+      if (typeof v === "object" && v.f) sd += `<c r="${ref}" s="2"><f>${xesc(v.f)}</f></c>`;
+      else if (typeof v === "number") sd += `<c r="${ref}" s="${st ? 3 : 2}"><v>${v.toFixed(2)}</v></c>`;
+      else sd += `<c r="${ref}" t="inlineStr" s="${st}"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+    });
+    sd += "</row>";
+  });
+  const cols = widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("");
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  return zipStore([
+    ["[Content_Types].xml", X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+    ["_rels/.rels", X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ["xl/workbook.xml", X + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Расчёт" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+    ["xl/_rels/workbook.xml.rels", X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ["xl/worksheets/sheet1.xml", X + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${cols}</cols><sheetData>${sd}</sheetData></worksheet>`],
+    ["xl/styles.xml", X + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs></styleSheet>'],
+  ]);
+}
+function xlsxAll(s, all) {
+  let rows = [], bold = new Set();
+  for (const fb of activeFibers(s)) {
+    const [r, b] = rowsFor(s, all[fb.n], fb.n);
+    b.forEach(i => bold.add(i + rows.length));
+    rows = rows.concat(r, [[]]);
+  }
+  const list = partsList(s, all);
+  bold.add(rows.length); bold.add(rows.length + 1);
+  rows.push(["Список делителей"], ["Делитель", "Шт", "Где"]);
+  for (const p of list) rows.push([p.label, String(p.count), p.where]);
+  rows.push(["Всего", String(list.reduce((a, p) => a + p.count, 0))]);
+  return xlsxBlob(rows, bold, [12, 12, 14, 16, 14, 16, 10, 70]);
+}
+
+if (typeof module !== "undefined") module.exports = { calc, calcAll, plan, loads, tails, spliceLines, textAll, rowsFor, xlsxAll, crc32, idealInput, wanted, COUPLERS, PLC,
+  partsList, partsText, reconnect, insertOnEdge, nextName, physOn, withPhys, sourceOf, midCurve, curveD, nearestSpan, activeFibers, lowFibers };
+
+</script>
+<script>
+// Расчёт PON для ПК — интерфейс. Данные хранятся в браузере (localStorage), схемы можно сохранять/открывать файлом.
+"use strict";
+
+const KEY = "pon_schemes_v1";
+// Палец (iPhone/Android) — зоны касания крупнее
+const COARSE = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+const $ = id => document.getElementById(id);
+const h = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "style") e.style.cssText = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, "");
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return e;
+};
+const num = x => { const v = parseFloat(String(x).replace(",", ".").replace("−", "-")); return isNaN(v) ? null : v; };
+
+let schemes = [];
+try { schemes = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { schemes = []; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(schemes)); } catch (e) { /* хранилище недоступно */ } };
+
+// addMode: "node" — щелчок ставит муфту, "note" — заметку, "" — только выбор
+// tab: "map" — схема, "parts" — список делителей; linking — муфта, которой выбираем новый приход
+const ui = { open: null, selected: null, edge: null, note: null, fiber: 1, addMode: "node", scale: 1, ox: 60, oy: 0, tab: "map", linking: null, linkErr: false };
+const cur = () => schemes.find(s => s.id === ui.open) || null;
+function update(f, persist = true) {
+  schemes = schemes.map(s => s.id === ui.open ? f(s) : s);
+  if (persist) save();
+  render();
+}
+const levelColor = (s, x) => x == null ? "var(--dim)" : x < s.low - EPS ? "var(--bad)" : x > s.high + EPS ? "var(--warn)" : "var(--ok)";
+
+/** Простая схема → сложная: кабель 8 вол., сигнал — по волокну №1 (красное) с тем же входом и отщипом. */
+function toMulti(s) {
+  if (s.multi) return s;
+  const r = rootOf(s);
+  return { ...s, multi: true, cable: Math.max(s.cable || 1, 8), palette: s.palette || { ...DEFAULT_CABLE },
+    fibers: [{ n: 1, input: s.input, trim: r ? r.trim || null : null }], nodes: s.nodes.map(n => ({ ...n, fiber: 1 })) };
+}
+
+// ---------- Список схем ----------
+function newScheme(title, multi) {
+  const id = Date.now();
+  const root = { id: id + 1, parent: null, x: 80, y: 260, name: "ОЛТ", abon: null, abonCount: 1, fiber: 1 };
+  const s = { id, title, input: -5, low: -21, high: -18, common: false, multi, cable: multi ? 8 : 1, fibers: multi ? [{ n: 1, input: -5 }] : [],
+    palette: { ...DEFAULT_CABLE }, nodes: [root], notes: [], fact: false };
+  schemes.push(s); save();
+  ui.open = id; ui.selected = root.id; ui.fiber = 1;
+  render();
+}
+
+function renderList() {
+  const box = $("list");
+  box.replaceChildren();
+  [...schemes].sort((a, b) => b.id - a.id).forEach(s => {
+    const all = calcAll(s);
+    const mins = Object.values(all).map(r => r.minLevel).filter(x => x != null);
+    const minL = mins.length ? Math.min(...mins) : null;
+    box.append(h("div", { class: "item" + (s.id === ui.open ? " active" : ""), onclick: () => { ui.open = s.id; ui.selected = null; ui.edge = null; ui.note = null; ui.fit = true; ui.fiber = activeFibers(s)[0].n; render(); } },
+      h("div", { class: "t" }, s.title || "Схема"),
+      h("div", { class: "sub", style: `color:${levelColor(s, minL)}` },
+        `муфт ${s.nodes.length - 1} · ${s.multi ? "волокон " + activeFibers(s).length + "/" + s.cable : "вход " + dbm(s.input)} · худший ${dbm(minL)}`),
+      h("div", { class: "row" },
+        h("button", { class: "mini", onclick: e => { e.stopPropagation(); const c = JSON.parse(JSON.stringify(s)); c.id = Date.now(); c.title += " (копия)"; schemes.push(c); save(); render(); } }, "копия"),
+        h("button", { class: "mini danger", onclick: e => { e.stopPropagation(); const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "точно удалить?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = "удалить"; } }, 3000); return; } { schemes = schemes.filter(x => x.id !== s.id); if (ui.open === s.id) ui.open = null; save(); render(); } } }, "удалить"))));
+  });
+  if (!schemes.length) box.append(h("div", { class: "sub", style: "padding:12px" }, "Схем пока нет — нажмите «Новая схема»."));
+}
+
+// ---------- Экран схемы ----------
+function render() {
+  renderList();
+  const s = cur();
+  // Узкий экран (iPhone): открыта схема — список схем прячется
+  document.body.classList.toggle("open", !!s);
+  $("empty").style.display = s ? "none" : "flex";
+  $("work").style.display = s ? "flex" : "none";
+  if (!s) return;
+  setCable(s.palette);
+  const fibers = activeFibers(s);
+  if (!fibers.some(f => f.n === ui.fiber)) ui.fiber = fibers[0].n;
+  const all = calcAll(s);
+  const f = ui.fiber, r = all[f];
+  const fInput = (fiberOf(s, f) || { input: s.input }).input;
+
+  $("title").textContent = s.title || "Схема";
+  $("summary").textContent = `Абоненты: ${dbm(r.minLevel)} … ${dbm(r.maxLevel)} дБм`;
+  $("summary").style.color = levelColor(s, r.minLevel);
+
+  // Волокна
+  const fb = $("fibers");
+  fb.replaceChildren();
+  fb.style.display = "flex";
+  // Простая схема (одно волокно) — кнопка перехода на кабель с волокнами: цвета, переварка, LOW
+  if (!s.multi) fb.append(h("span", { class: "sub" }, "Одно волокно, без кабеля."),
+    h("button", { class: "chip", onclick: () => { update(toMulti); fibersDialog(cur(), calcAll(cur())); } }, "Сделать кабель с волокнами (цвета, переварка, LOW)"));
+  if (s.multi) {
+    fibers.forEach(x => fb.append(h("button", { class: "chip" + (x.n === f ? " on" : ""), onclick: () => { ui.fiber = x.n; render(); } },
+      h("span", { class: "dot", style: `background:${fiberRgb(x.n)}` }), `№${x.n} ${fiberShort(x.n)} · `,
+      h("b", { style: `color:${levelColor(s, all[x.n].minLevel)}` }, dbm(all[x.n].minLevel)))));
+    for (const n of lowFibers(s)) fb.append(h("span", { class: "chip", style: "opacity:.6;cursor:default", title: "сигнала нет, волокно свободное" },
+      h("span", { class: "dot", style: `background:${fiberRgb(n)}` }), `№${n} ${fiberShort(n)} · LOW`));
+    fb.append(h("button", { class: "chip", onclick: () => fibersDialog(s, all) }, `Кабель ${s.cable} вол.`));
+  }
+
+  // Вкладки: схема / список делителей
+  $("tabMap").className = "tab" + (ui.tab !== "parts" ? " on" : "");
+  $("tabParts").className = "tab" + (ui.tab === "parts" ? " on" : "");
+  $("mapView").style.display = ui.tab === "parts" ? "none" : "flex";
+  $("parts").style.display = ui.tab === "parts" ? "block" : "none";
+  if (ui.tab === "parts") { fb.style.display = "none"; $("wanted").style.display = "none"; $("linkbar").style.display = "none"; renderParts(s, all); return; }
+  $("wanted").style.display = "flex";
+  const lb = $("linkbar"), ln = ui.linking != null && s.nodes.find(x => x.id === ui.linking);
+  lb.style.display = ln ? "flex" : "none";
+  if (ln) lb.replaceChildren(h("div", { style: "flex:1" + (ui.linkErr ? ";color:var(--bad)" : "") },
+    ui.linkErr ? "К своей же ветке подключить нельзя — щёлкните другую муфту или ОЛТ." : `Щёлкните муфту (или ОЛТ), откуда придёт линия к ${ln.name}.`),
+    h("button", { onclick: () => { ui.linking = null; ui.linkErr = false; render(); } }, "Отмена (Esc)"));
+
+  // Желаемый вход
+  const lo = r.needLow, hi = r.needHigh, ideal = idealInput(r);
+  const wb = $("wanted");
+  wb.replaceChildren();
+  const pre = s.multi ? `Волокно ${fiberName(f)}. ` : "";
+  wb.className = "wanted " + (lo == null ? "" : fInput < lo - EPS ? "bad" : fInput > hi + EPS ? "warn" : "ok");
+  if (lo == null) wb.append(h("div", {}, pre + "Желаемый вход появится, когда на схеме будет муфта с абонентским делителем."));
+  else {
+    const rootNr = r.nodes[rootOf(s).id];
+    const trim = rootNr && rootNr.trim;
+    wb.append(h("div", { style: "flex:1" },
+      h("b", {}, `${pre}Желаемый вход: ${dbm(lo)} … ${dbm(hi)} дБм, идеально ≈ ${dbm(ideal)}`), h("br"),
+      `Сейчас приходит ${dbm(fInput)}: ` + (fInput < lo - EPS ? `не хватает ${dbm(lo - fInput)} дБ` : fInput > hi + EPS ? (trim ? `лишние ${dbm(fInput - hi)} дБ отщипнуты` : `лишние ${dbm(fInput - hi)} дБ — можно отщипнуть или добавить муфты`) : "в норме"),
+      trim ? h("div", {}, h("b", {}, "Отщип на входе " + trimText(trim))) : null,
+      r.overflow ? h("div", { style: "color:var(--bad);font-weight:600" }, r.overflow) : null));
+    if (Math.abs(ideal - fInput) > 0.05) wb.append(h("button", { onclick: () => update(sc => withInput(sc, f, Math.round(ideal * 10) / 10)) }, "Подставить"));
+  }
+
+  $("mode").textContent = ui.addMode === "node" ? "Щелчок — новая муфта" : "Щелчок — муфта (выкл.)";
+  $("mode").className = "chip" + (ui.addMode === "node" ? " on" : "");
+  $("noteMode").className = "chip" + (ui.addMode === "note" ? " on" : "");
+  $("fact").textContent = s.fact ? "Режим: по факту" : "Режим: как будет";
+  $("fact").className = "chip" + (s.fact ? " on" : "");
+  renderPanel(s, r, all, f);
+  // Только открыли схему — вписываем её в экран (панель уже на месте, размер холста известен)
+  if (ui.fit) { ui.fit = false; fitView(s); }
+  drawCanvas(s, r, all, f);
+}
+
+/** Вкладка «Список делителей»: что и сколько поставить по всей схеме. */
+function renderParts(s, all) {
+  const box = $("parts");
+  box.replaceChildren();
+  const list = partsList(s, all);
+  if (!list.length) { box.append(h("div", { class: "sub" }, "Делителей пока нет — нарисуйте муфты на схеме.")); return; }
+  box.append(h("div", { class: "row" }, h("h3", { style: "margin:0;flex:1" }, `Всего: ${list.reduce((a, p) => a + p.count, 0)} шт` + (s.multi ? " — по всем волокнам кабеля" : "")),
+    h("button", { onclick: () => { navigator.clipboard && navigator.clipboard.writeText(partsText(list)).catch(() => {}); } }, "Копировать")));
+  for (const [title, part] of [["Неравномерные (FBT)", list.filter(p => !p.plc)], ["PLC", list.filter(p => p.plc)]]) {
+    if (!part.length) continue;
+    box.append(h("h4", {}, title));
+    const t = h("table", { class: "parts" }, h("tr", {}, h("th", {}, "Делитель"), h("th", {}, "Шт"), h("th", {}, "Где")));
+    for (const p of part) t.append(h("tr", {}, h("td", { class: "big" }, p.label), h("td", { class: "big" }, String(p.count)), h("td", { class: "sub" }, p.where)));
+    box.append(t);
+  }
+  box.append(h("div", { class: "sub", style: "margin-top:10px" }, "Неравномерные — вместе с отщипами, по расчёту. Абонентские — сколько стоит в каждой муфте. Список уходит и в «Текст / Telegram», и в Excel."));
+}
+
+/** Вписать всю схему (муфты, изгибы, заметки) в холст с полями под подписи. */
+function fitView(s) {
+  const b = $("canvas").getBoundingClientRect();
+  if (!b.width || !b.height) return;
+  const xs = [], ys = [];
+  for (const n of s.nodes) { xs.push(n.x); ys.push(n.y); (n.bends || []).forEach((v, i) => (i % 2 ? ys : xs).push(v)); }
+  for (const nt of s.notes || []) { xs.push(nt.x); ys.push(nt.y); }
+  const x0 = Math.min(...xs) - 40, x1 = Math.max(...xs) + 120, y0 = Math.min(...ys) - 50, y1 = Math.max(...ys) + 70;
+  const sc = Math.min(2, Math.max(0.3, Math.min(b.width / (x1 - x0), b.height / (y1 - y0))));
+  ui.scale = sc;
+  ui.ox = (b.width - (x1 - x0) * sc) / 2 - x0 * sc;
+  ui.oy = (b.height - (y1 - y0) * sc) / 2 - y0 * sc;
+}
+
+// ---------- Холст (SVG) ----------
+const svgNS = "http://www.w3.org/2000/svg";
+const sv = (tag, attrs = {}, text) => { const e = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+
+/** Значок муфты: форма — тип (как на рабочей карте), заливка — состояние, обводка — уровень у абонента. */
+function marker(n, fill, ring) {
+  const g = sv("g", {});
+  const x = n.x, y = n.y, kind = n.kind || ({ "1x4": "a14", "1x8": "a18", "1x2": "a12" }[n.abon] || "trunk");
+  const st = { fill, stroke: ring, "stroke-width": 4 };
+  if (kind === "trunk") g.append(sv("rect", { x: x - 14, y: y - 14, width: 28, height: 28, rx: 3, ...st }));
+  else if (kind === "cable2") g.append(sv("polygon", { points: `${x},${y - 18} ${x + 18},${y} ${x},${y + 18} ${x - 18},${y}`, ...st }));
+  else if (kind === "reserve") { g.append(sv("circle", { cx: x, cy: y, r: 15, ...st, fill: "var(--surface)" })); g.append(sv("circle", { cx: x, cy: y, r: 8, fill })); }
+  else g.append(sv("circle", { cx: x, cy: y, r: 16, ...st }));
+  const label = { a14: "4", a18: "8", a12: "2", trunk: "М", cable2: "К", reserve: "" }[kind];
+  if (label) g.append(sv("text", { x, y: y + 5, "text-anchor": "middle", fill: "#fff", "font-size": 14, "font-weight": 700 }, label));
+  return g;
+}
+
+function drawCanvas(s, r, all, f) {
+  const svg = $("canvas");
+  svg.replaceChildren();
+  const g = sv("g", { transform: `translate(${ui.ox},${ui.oy}) scale(${ui.scale})` });
+  svg.append(g);
+  const byId = Object.fromEntries(s.nodes.map(n => [n.id, n]));
+  for (const n of s.nodes) {
+    const p = byId[n.parent];
+    if (!p) continue;
+    // Путь выбранного волокна — цветом того волокна кабеля, по которому он идёт на этом участке
+    const onFiber = s.multi && r.nodes[n.id] && r.nodes[n.id].input != null;
+    const sel = ui.edge === n.id;
+    const d = curveD(edgePts(p, n));
+    g.append(sv("path", { d, fill: "none", stroke: sel ? "var(--accent)" : onFiber ? fiberRgb(physOn(s, n.id, f)) : "var(--line)", "stroke-width": sel ? 7 : onFiber ? 5 : 2.5 }));
+    // Широкая невидимая линия — чтобы попасть мышью
+    g.append(sv("path", { d, fill: "none", stroke: "transparent", "stroke-width": COARSE ? 30 : 14, class: "edge", "data-edge": n.id, style: "cursor:" + (sel ? "move" : "pointer") }));
+  }
+  // Изгибы выбранной линии — ручки (тянуть; щелчок — убрать)
+  const se = ui.edge != null && byId[ui.edge];
+  if (se) (se.bends || []).forEach((v, i) => {
+    if (i % 2) return;
+    g.append(sv("circle", { cx: v, cy: se.bends[i + 1], r: COARSE ? 13 : 7, fill: "var(--surface)", stroke: "var(--accent)", "stroke-width": 3, class: "bend", "data-i": i / 2, style: "cursor:move" }));
+  });
+  for (const n of s.nodes) {
+    const nr = r.nodes[n.id] || {};
+    const own = s.multi && n.parent != null ? (all[fiberOfNode(n)] || r).nodes[n.id] : null;
+    const show = s.multi && n.parent != null && fiberOfNode(n) !== f && !(nr.splice && nr.splice.t === "split") ? own : nr;
+    const dim = s.multi && n.parent != null && fiberOfNode(n) !== f && !(nr.splice && nr.splice.t === "split");
+    const grp = sv("g", { "data-id": n.id, class: "node", style: dim ? "opacity:.45" : "" });
+    if (n.parent == null) {
+      grp.append(sv("rect", { x: n.x - 20, y: n.y - 16, width: 40, height: 32, rx: 5, fill: "#FF5252" }));
+      grp.append(sv("text", { x: n.x, y: n.y + 5, "text-anchor": "middle", fill: "#fff", "font-size": 12, "font-weight": 700 }, "ОЛТ"));
+      grp.append(sv("text", { x: n.x - 20, y: n.y + 32, class: "lb b" }, `${n.name} · вход ${dbm((fiberOf(s, f) || { input: s.input }).input)} дБм`));
+      const w = wanted(nr, s);
+      if (w) grp.append(sv("text", { x: n.x - 20, y: n.y + 48, class: "lb", fill: "var(--accent)" }, `нужно ${dbm(w[0])}…${dbm(w[1])}`));
+      if (nr.trim) grp.append(sv("text", { x: n.x - 20, y: n.y + 64, class: "lb", fill: "var(--warn)" }, `отщип ${nr.trim.c.name} → запас ${dbm(nr.trim.reserve)}`));
+    } else {
+      const lvl = (own || nr).abonLevel;
+      const ab = abonOf(n);
+      grp.append(marker(n, (STATUSES[n.status || "spliced"] || STATUSES.spliced).color, ab ? levelColor(s, lvl) : "var(--surface)"));
+      if (s.multi) grp.append(sv("circle", { cx: n.x + 15, cy: n.y - 15, r: 6, fill: fiberRgb(fiberOfNode(n)), stroke: "var(--text)", "stroke-width": 1 }));
+      if (n.fixed) grp.append(sv("circle", { cx: n.x, cy: n.y, r: 22, fill: "none", stroke: "var(--text)", "stroke-width": 1.5, "stroke-dasharray": "3 3" }));
+      grp.append(sv("text", { x: n.x - 18, y: n.y - 24, class: "lb b" }, n.name + (show && show.short ? "  " + show.short : "")));
+      if (ab) grp.append(sv("text", { x: n.x - 18, y: n.y + 34, class: "lb", fill: levelColor(s, lvl) }, `${(n.abonCount || 1) > 1 ? n.abonCount + "×" : ""}${ab} → ${dbm(lvl)}`));
+    }
+    if (n.id === ui.selected) grp.append(sv("circle", { cx: n.x, cy: n.y, r: 27, fill: "none", stroke: "var(--accent)", "stroke-width": 3 }));
+    g.append(grp);
+  }
+  // Заметки (как маркеры с записями на карте) — в расчёт не идут
+  for (const nt of s.notes || []) {
+    const grp = sv("g", { class: "note", "data-note": nt.id, style: "cursor:pointer" });
+    grp.append(sv("path", { d: `M${nt.x},${nt.y} l-9,-16 a10,10 0 1,1 18,0 z`, fill: "#7CB342", stroke: nt.id === ui.note ? "var(--accent)" : "#fff", "stroke-width": nt.id === ui.note ? 3 : 1.5 }));
+    grp.append(sv("text", { x: nt.x + 12, y: nt.y - 14, class: "lb" }, (nt.text || "заметка").split("\n")[0].slice(0, 40)));
+    g.append(grp);
+  }
+}
+
+// Мышь и палец (iPhone/Android в браузере): касание пустого — муфта, точки — выбор; перетаскивание точки или холста;
+// колесо или два пальца — масштаб. События ловим на самом холсте (захват указателя): его содержимое перерисовывается на ходу.
+(function pointer() {
+  const svg = () => $("canvas");
+  let drag = null;
+  const pts = new Map(); // пальцы на холсте: id → [x, y]
+  let pinch = null;
+  const world = e => { const b = svg().getBoundingClientRect(); return [(e.clientX - b.left - ui.ox) / ui.scale, (e.clientY - b.top - ui.oy) / ui.scale]; };
+  document.addEventListener("pointerdown", e => {
+    if (!e.target.closest || !e.target.closest("#canvas") || (e.pointerType === "mouse" && e.button !== 0)) return;
+    try { svg().setPointerCapture(e.pointerId); } catch (err) { /* не критично */ }
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) {
+      // Второй палец — масштаб и сдвиг, перетаскивание отменяем
+      drag = null;
+      const [p, q] = [...pts.values()];
+      pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), cx: (p[0] + q[0]) / 2, cy: (p[1] + q[1]) / 2 };
+      return;
+    }
+    if (pts.size > 2) return;
+    const node = e.target.closest(".node"), note = e.target.closest(".note"), edge = e.target.closest(".edge"), bend = e.target.closest(".bend");
+    drag = { id: node ? Number(node.dataset.id) : null, note: note ? Number(note.dataset.note) : null, edge: edge ? Number(edge.dataset.edge) : null,
+      bend: bend ? Number(bend.dataset.i) : null, x: e.clientX, y: e.clientY, moved: false, slop: e.pointerType === "mouse" ? 4 : 10 };
+    // Потянули выбранную линию — новый изгиб на том участке, за который взялись
+    if (drag.edge != null && drag.edge === ui.edge) drag.newBend = true;
+  });
+  const setBends = (id, f, persist) => update(s => ({ ...s, nodes: s.nodes.map(n => n.id === id ? { ...n, bends: f(n.bends || []) } : n) }), persist);
+  document.addEventListener("pointermove", e => {
+    if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size >= 2) {
+      const [p, q] = [...pts.values()];
+      const d = Math.hypot(p[0] - q[0], p[1] - q[1]), cx = (p[0] + q[0]) / 2, cy = (p[1] + q[1]) / 2;
+      const b = svg().getBoundingClientRect(), lx = cx - b.left, ly = cy - b.top;
+      const ns = Math.min(4, Math.max(0.3, ui.scale * (pinch.d ? d / pinch.d : 1)));
+      ui.ox = lx - (lx - ui.ox) * ns / ui.scale + (cx - pinch.cx); ui.oy = ly - (ly - ui.oy) * ns / ui.scale + (cy - pinch.cy); ui.scale = ns;
+      pinch = { d, cx, cy };
+      render(); return;
+    }
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < drag.slop) return;
+    drag.moved = true; drag.x = e.clientX; drag.y = e.clientY;
+    const mx = dx / ui.scale, my = dy / ui.scale;
+    const [wx, wy] = world(e);
+    if (drag.newBend) {
+      drag.newBend = false;
+      const s = cur(), n = s.nodes.find(x => x.id === ui.edge), p = n && s.nodes.find(x => x.id === n.parent);
+      if (p) { const span = nearestSpan(edgePts(p, n), wx, wy)[0]; drag.bend = span; setBends(n.id, b => [...b.slice(0, 2 * span), wx, wy, ...b.slice(2 * span)], false); }
+      return;
+    }
+    if (drag.bend != null && ui.edge != null) setBends(ui.edge, b => b.map((v, i) => i === 2 * drag.bend ? wx : i === 2 * drag.bend + 1 ? wy : v), false);
+    else if (drag.id != null) update(s => ({ ...s, nodes: s.nodes.map(n => n.id === drag.id ? { ...n, x: n.x + mx, y: n.y + my } : n) }), false);
+    else if (drag.note != null) update(s => ({ ...s, notes: (s.notes || []).map(n => n.id === drag.note ? { ...n, x: n.x + mx, y: n.y + my } : n) }), false);
+    else { ui.ox += dx; ui.oy += dy; render(); }
+  });
+  const lift = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pinch) { if (pts.size < 2) pinch = null; return; }
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (e.type === "pointercancel") { if (d.moved) save(); return; }
+    const s = cur(); if (!s) return;
+    if (d.moved) { if (d.id != null || d.note != null || d.bend != null) save(); return; }
+    // Щелчок по изгибу — убрать его
+    if (d.bend != null && ui.edge != null) { setBends(ui.edge, b => b.filter((_, i) => Math.floor(i / 2) !== d.bend), true); return; }
+    // Переподключение: щелчок по точке — она становится приходом
+    if (ui.linking != null) {
+      if (d.id == null) return;
+      const ns = reconnect(s, ui.linking, d.id);
+      if (!ns) { ui.linkErr = true; render(); return; }
+      const id = ui.linking; ui.linking = null; ui.linkErr = false; ui.selected = id;
+      update(() => ns); return;
+    }
+    if (d.edge != null && d.edge === ui.edge) return;
+    ui.edge = null; ui.note = null;
+    if (d.id != null) {
+      ui.selected = d.id;
+      const n = s.nodes.find(x => x.id === d.id);
+      if (s.multi && n && n.parent != null) ui.fiber = fiberOfNode(n);
+      render(); return;
+    }
+    if (d.note != null) { ui.note = d.note; ui.selected = null; render(); return; }
+    if (d.edge != null) { ui.edge = d.edge; ui.selected = null; render(); return; }
+    const [x, y] = world(e);
+    const id = Date.now();
+    if (ui.addMode === "note") {
+      update(sc => ({ ...sc, notes: [...(sc.notes || []), { id, x, y, text: "" }] }));
+      ui.note = id; ui.selected = null; ui.addMode = "node"; render(); return;
+    }
+    if (ui.addMode !== "node") { ui.selected = null; render(); return; }
+    const parent = s.nodes.find(n => n.id === ui.selected) || rootOf(s);
+    update(sc => ({ ...sc, nodes: [...sc.nodes, { id, parent: parent.id, x, y, name: nextName(sc), kind: "a14", status: "spliced", abonCount: 1, fiber: ui.fiber }] }));
+    ui.selected = id; render();
+  };
+  document.addEventListener("pointerup", lift);
+  document.addEventListener("pointercancel", lift);
+  document.addEventListener("wheel", e => {
+    if (!e.target.closest || !e.target.closest("#canvas")) return;
+    e.preventDefault();
+    const b = svg().getBoundingClientRect(), cx = e.clientX - b.left, cy = e.clientY - b.top;
+    const ns = Math.min(4, Math.max(0.3, ui.scale * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    ui.ox = cx - (cx - ui.ox) * ns / ui.scale; ui.oy = cy - (cy - ui.oy) * ns / ui.scale; ui.scale = ns;
+    render();
+  }, { passive: false });
+})();
+
+// ---------- Панель точки ----------
+/** Поле ввода: значение применяется по Enter или при выходе из поля (иначе перерисовка сбивает курсор). */
+function field(label, value, onInput, width = "110px") {
+  return h("label", { class: "fld" }, label, h("input", { value, style: `width:${width}`, onchange: e => onInput(e.target.value),
+    onkeydown: e => { if (e.key === "Enter") e.target.blur(); } }));
+}
+
+/** Участок линии: какие волокна по нему идут и с каким сигналом. */
+function edgePanel(p, s, all) {
+  const n = s.nodes.find(x => x.id === ui.edge);
+  const par = n && s.nodes.find(x => x.id === n.parent);
+  if (!n || !par) { ui.edge = null; return false; }
+  p.append(h("h3", {}, `Участок ${par.name} → ${n.name}`));
+  p.append(h("div", { class: "row wrap" },
+    h("button", { onclick: () => { const id = Date.now(); const ns = insertOnEdge(s, n.id, id); if (ns) { ui.edge = null; ui.selected = id; update(() => ns); } } }, "Муфта в середину линии"),
+    (n.bends || []).length ? h("button", { onclick: () => update(sc => ({ ...sc, nodes: sc.nodes.map(x => x.id === n.id ? { ...x, bends: [] } : x) })) }, "Выпрямить") : null));
+  p.append(h("div", { class: "sub" }, "Потяните линию мышью — появится изгиб, его можно двигать. Щелчок по изгибу — убрать."));
+  const rows = activeFibers(s).map(fb => [fb, all[fb.n].nodes[n.id]]).filter(([, nr]) => nr && nr.input != null);
+  if (!rows.length) p.append(h("div", { class: "sub" }, "По этому участку не идёт ни одно рабочее волокно (дальше нет абонентов)."));
+  rows.forEach(([fb, nr]) => {
+    const ph = physOn(s, n.id, fb.n);
+    p.append(h("div", { class: "row" },
+      h("span", { class: "dot", style: `background:${fiberRgb(ph)}` }),
+      h("button", { class: "chip" + (fb.n === ui.fiber ? " on" : ""), onclick: () => { ui.fiber = fb.n; render(); } }, "сигнал " + fiberName(fb.n)),
+      (s.multi && ph !== fb.n ? `по ${fiberName(ph)}, ` : "") + `приходит ${dbm(nr.input)} дБм`));
+  });
+  if (s.multi) {
+    const low = lowFibers(s).map(f => physOn(s, n.id, f));
+    if (low.length) p.append(h("div", { class: "sub" }, "Свободные (LOW) на участке: " + low.map(fiberName).join(", ")));
+    p.append(h("div", { class: "sub" }, "Щелчок по волокну — его путь на схеме выделится цветом. Переварить волокна — в панели муфты."));
+  }
+  return true;
+}
+
+/** Заметка: просто текст на схеме, в расчёт не идёт. */
+function notePanel(p, s) {
+  const nt = (s.notes || []).find(x => x.id === ui.note);
+  if (!nt) { ui.note = null; return false; }
+  p.append(h("h3", {}, "Заметка"));
+  p.append(h("textarea", { rows: 6, style: "width:100%", onchange: e => update(sc => ({ ...sc, notes: sc.notes.map(x => x.id === nt.id ? { ...x, text: e.target.value } : x) })) }, nt.text || ""));
+  p.append(h("button", { class: "danger", onclick: () => { update(sc => ({ ...sc, notes: sc.notes.filter(x => x.id !== nt.id) })); ui.note = null; render(); } }, "Удалить заметку"));
+  return true;
+}
+
+function renderPanel(s, r, all, f) {
+  const p = $("panel");
+  p.replaceChildren();
+  if (ui.edge != null && edgePanel(p, s, all)) return;
+  if (ui.note != null && notePanel(p, s)) return;
+  const n = s.nodes.find(x => x.id === ui.selected);
+  if (!n) { p.append(h("div", { class: "sub" }, "Выберите точку на схеме. Щелчок по пустому месту ставит новую муфту, соединённую с выбранной. Щелчок по линии — какие волокна по ней идут.")); return; }
+  const setNode = (patch) => update(sc => ({ ...sc, nodes: sc.nodes.map(x => x.id === n.id ? { ...x, ...patch } : x) }));
+  if (n.parent == null) {
+    const nr = r.nodes[n.id];
+    const fInput = (fiberOf(s, f) || { input: s.input }).input;
+    p.append(h("h3", {}, "ОЛТ — вход линии" + (s.multi ? ", волокно " + fiberName(f) : "")));
+    p.append(field("Название", n.name, v => setNode({ name: v }), "160px"));
+    p.append(field("Сигнал на входе, дБм", dbm(fInput), v => { const x = num(v); if (x != null) { schemes = schemes.map(sc => sc.id === s.id ? withInput(sc, f, x) : sc); save(); render(); } }));
+    p.append(h("div", { class: "sub" }, `Для ${dbm(s.low)} у худшего нужен вход: ${dbm(r.needLow)} · для ${dbm(s.high)}: ${dbm(r.needHigh)}`));
+    spliceBlock(p, s, n, nr, f);
+    trimBlock(p, s, n, nr, true, (fiberOf(s, f) || {}).trim || null, code => update(sc => withRootTrim(sc, f, code)));
+    return;
+  }
+  const nr = (all[fiberOfNode(n)] || r).nodes[n.id] || {};
+  p.append(h("div", { class: "row" },
+    field("Муфта", n.name, v => { schemes = schemes.map(sc => sc.id === s.id ? { ...sc, nodes: sc.nodes.map(x => x.id === n.id ? { ...x, name: v } : x) } : sc); save(); drawCanvas(cur(), calc(cur(), f), calcAll(cur()), f); }, "120px"),
+    h("button", { class: "danger", onclick: () => { update(sc => ({ ...sc, nodes: sc.nodes.filter(x => x.id !== n.id).map(x => x.parent === n.id ? { ...x, parent: n.parent } : x) })); ui.selected = null; render(); } }, "Удалить муфту")));
+  // Соединения: откуда приходит и куда уходит. Ошиблись — «Сменить» и щелчок по нужной муфте
+  const from = s.nodes.find(x => x.id === n.parent), outs = childrenOf(s, n.id);
+  const go = id => { ui.selected = id; ui.edge = null; ui.note = null; render(); };
+  const link = id => { ui.linking = id; ui.linkErr = false; render(); };
+  const insert = childId => { const id = Date.now(); const ns = insertOnEdge(cur(), childId, id); if (ns) { ui.selected = id; ui.edge = null; update(() => ns); } };
+  const box = h("div", { class: "card", style: "margin:6px 0 10px" }, h("b", {}, "Соединения"),
+    h("div", { class: "row wrap" }, h("span", { class: "sub", style: "width:60px" }, "Приход:"),
+      from ? h("button", { class: "chip", title: "перейти", onclick: () => go(from.id) }, from.name) : null,
+      h("button", { onclick: () => link(n.id) }, "Сменить, откуда приходит"),
+      h("button", { onclick: () => insert(n.id) }, `+ муфта между ${from ? from.name : ""} и ${n.name}`)));
+  if (!outs.length) box.append(h("div", { class: "row" }, h("span", { class: "sub", style: "width:60px" }, "Уход:"), h("span", {}, "— конец ветки (щелчок по пустому месту схемы — новая муфта отсюда)")));
+  outs.forEach(c => box.append(h("div", { class: "row wrap" }, h("span", { class: "sub", style: "width:60px" }, "Уход:"),
+    h("button", { class: "chip", title: "перейти", onclick: () => go(c.id) }, c.name),
+    h("button", { onclick: () => link(c.id) }, `Перенести ${c.name} к другой муфте`),
+    h("button", { onclick: () => insert(c.id) }, `+ муфта между ${n.name} и ${c.name}`))));
+  p.append(box);
+  if (s.multi) fiberRouting(p, s, all, n, outs);
+  p.append(h("div", {}, `На входе: ${dbm(nr.input)} дБм`));
+  const w = wanted(nr, s);
+  if (w) p.append(h("div", { style: "color:var(--accent)" }, `Нужно на входе: ${dbm(w[0])} … ${dbm(w[1])}`));
+  if (abonOf(n)) p.append(h("div", { style: `font-weight:700;color:${levelColor(s, nr.abonLevel)}` }, `У абонента: ${dbm(nr.abonLevel)} дБм`));
+
+  if (s.multi) {
+    p.append(h("div", { class: "sub" }, "Абоненты муфты — от волокна"));
+    p.append(h("div", { class: "row wrap" }, activeFibers(s).map(fb => h("button", { class: "chip" + (fiberOfNode(n) === fb.n ? " on" : ""), onclick: () => { setNode({ fiber: fb.n, fixed: null, trim: null }); ui.fiber = fb.n; render(); } },
+      h("span", { class: "dot", style: `background:${fiberRgb(fb.n)}` }), "№" + fb.n))));
+    if (childrenOf(s, n.id).length) p.append(h("button", { onclick: () => {
+      const sub = id => childrenOf(s, id).flatMap(c => [c.id, ...sub(c.id)]);
+      const ids = new Set(sub(n.id));
+      update(sc => ({ ...sc, nodes: sc.nodes.map(x => ids.has(x.id) ? { ...x, fiber: fiberOfNode(n), fixed: null, trim: null } : x) }));
+    } }, `Волокно ${fiberName(fiberOfNode(n))} — и всем муфтам дальше по ветке`));
+    for (const fb of activeFibers(s)) {
+      if (fb.n === fiberOfNode(n)) continue;
+      const gr = all[fb.n].nodes[n.id];
+      if (!gr || gr.input == null) continue;
+      if (gr.splice && gr.splice.t === "split") {
+        p.append(h("div", { style: `font-weight:600;color:${fiberRgb(fb.n)};margin-top:8px` }, `Волокно ${fiberName(fb.n)} ветвится в этой муфте: делитель ${gr.short}`));
+        spliceBlock(p, s, n, gr, fb.n);
+      } else p.append(h("div", { class: "sub" }, `Волокно ${fiberName(fb.n)}: транзит, ${dbm(gr.input)} дБм`));
+    }
+    p.append(h("div", { style: "font-weight:600;margin-top:8px" }, `Своё волокно ${fiberName(fiberOfNode(n))}:`));
+  }
+
+  // Тип муфты (форма значка) и состояние (цвет) — как на рабочей карте
+  const kind = n.kind || ({ "1x4": "a14", "1x8": "a18", "1x2": "a12" }[n.abon] || "trunk");
+  p.append(h("div", { class: "sub" }, "Тип муфты"));
+  p.append(h("div", { class: "row wrap" }, Object.entries(KINDS).map(([k, v]) => h("button", { class: "chip" + (kind === k ? " on" : ""), onclick: () => setNode({ kind: k, abon: v.abon }) }, v.title))));
+  p.append(h("div", { class: "sub" }, "Состояние"));
+  p.append(h("div", { class: "row wrap" }, Object.entries(STATUSES).map(([k, v]) => h("button", { class: "chip" + ((n.status || "spliced") === k ? " on" : ""), onclick: () => setNode({ status: k }) },
+    h("span", { class: "dot", style: `background:${v.color}` }), v.title))));
+  if (n.status === "ring") p.append(h("div", { class: "sub" }, "Кольцо/проходная: абонентов нет, волокна идут транзитом."));
+  if (n.status === "brk") p.append(h("div", { class: "sub" }, s.fact ? "Режим «по факту»: дальше этой муфты сигнала нет." : "Режим «как будет»: считается, будто сварено."));
+  const ab = abonOf(n);
+  if (ab) p.append(h("div", { class: "row" }, h("span", { class: "sub" }, `Абонентских ${ab} в муфте:`),
+    [1, 2, 3, 4].map(k => h("button", { class: "chip" + ((n.abonCount || 1) === k ? " on" : ""), onclick: () => setNode({ abonCount: k }) }, String(k)))));
+  const ld = loads(s, n, fiberOfNode(n));
+  p.append(h("div", { style: "font-weight:600;margin-top:6px" }, !nr.short && ld <= 1
+    ? "Делитель в муфте не нужен: сигнал идёт целиком " + (ab ? `на абонентский ${ab}.` : "дальше.")
+    : `Делитель в муфте: ${nr.short}` + (n.fixed ? " (выставлен вручную)" : " (подобран автоматически)")));
+  spliceBlock(p, s, n, nr, fiberOfNode(n));
+  if (ld === 2) p.append(h("div", { class: "row" },
+    h("button", { onclick: () => pickDialog(`Делитель в ${n.name}`, COUPLERS.map(c => [`${c.name}   отвод −${c.tap} дБ, проход −${c.thru} дБ${c.common ? "  ★" : ""}`, () => setNode({ fixed: c.name }), c.name === nr.short])) }, "Поставить свой делитель"),
+    n.fixed ? h("button", { onclick: () => setNode({ fixed: null }) }, "Вернуть авто") : null));
+  else if (ld > 2) p.append(h("div", { class: "sub" }, "В муфте больше двух направлений — делители подбираются каскадом автоматически."));
+  trimBlock(p, s, n, nr, false, n.trim || null, code => setNode({ trim: code }));
+}
+
+/** Выбор волокна кабеля (цвет): список 1…cable, у каждого — что по нему сейчас идёт на этой линии. */
+function physSelect(s, lineId, value, onPick) {
+  const sel = h("select", { onchange: e => onPick(Number(e.target.value)) });
+  const low = new Set(lowFibers(s)), lit = new Set(activeFibers(s).map(f => f.n));
+  for (let k = 1; k <= Math.max(s.cable || 1, value); k++) {
+    const src = sourceOf(s, lineId, k);
+    const o = h("option", { value: k }, `${fiberName(k)}${lit.has(src) ? " · сигнал №" + src : low.has(src) ? " · LOW" : ""}`);
+    if (k === value) o.selected = true;
+    sel.append(o);
+  }
+  return sel;
+}
+
+/**
+ * Переварка в муфте (сложная схема): по какому волокну приходит каждый сигнал (и свободное LOW), что с ним в муфте,
+ * по какому уходит на каждую линию. По умолчанию — транзит «цвет в цвет»; поменяли — два волокна меняются местами.
+ */
+function fiberRouting(p, s, all, n, outs) {
+  const lit = new Set(activeFibers(s).map(f => f.n)), low = new Set(lowFibers(s));
+  // Все волокна кабеля: сначала с сигналом и LOW, потом остальные (по умолчанию сварены цвет в цвет)
+  const every = Array.from({ length: Math.max(s.cable || 1, ...lit, ...low) }, (_, i) => i + 1);
+  const main = every.filter(f => lit.has(f) || low.has(f)), rest = every.filter(f => !lit.has(f) && !low.has(f));
+  const head = () => h("tr", {}, h("th", {}, "Приход"), h("th", {}, "В муфте"), ...outs.map(c => h("th", {}, "Уход → " + c.name)));
+  const row = f => {
+    const gr = lit.has(f) && all[f] ? all[f].nodes[n.id] : null;
+    const pin = physOn(s, n.id, f);
+    const moved = pin !== f || outs.some(c => physOn(s, c.id, f) !== pin);
+    const what = low.has(f) ? "LOW (запасное), транзит" : !lit.has(f) ? (moved ? "переварено" : "цвет в цвет") :
+      !gr || gr.input == null ? "сигнал №" + f + ", дальше нет абонентов" :
+      "сигнал №" + f + ": " + (gr.short ? "делитель " + gr.short : "транзит") + (fiberOfNode(n) === f && abonOf(n) ? ", абон. " + abonOf(n) : "");
+    return h("tr", {},
+      h("td", {}, physSelect(s, n.id, pin, v => update(sc => withPhys(sc, n.id, f, v)))),
+      h("td", { style: lit.has(f) ? "font-weight:600" : "" }, what),
+      ...outs.map(c => h("td", {}, physSelect(s, c.id, physOn(s, c.id, f), v => update(sc => withPhys(sc, c.id, f, v))))));
+  };
+  p.append(h("h4", {}, "Волокна в муфте — что куда"));
+  p.append(h("div", { class: "sub" }, "Все волокна по умолчанию сварены «цвет в цвет». Выберите другой цвет на приходе или уходе — волокна поменяются местами (красное ↔ зелёное)."));
+  if (main.length) p.append(h("table", { class: "tails" }, head(), main.map(row)));
+  if (rest.length) {
+    ui.restOpen = ui.restOpen || {};
+    const det = h("details", { ontoggle: e => { ui.restOpen[n.id] = e.target.open; } },
+      h("summary", { style: "cursor:pointer;margin:6px 0" }, `Остальные волокна кабеля (${rest.length}) — цвет в цвет`),
+      h("table", { class: "tails" }, head(), rest.map(row)));
+    if (ui.restOpen[n.id]) det.open = true;
+    p.append(det);
+  }
+  if (!outs.length) p.append(h("div", { class: "sub" }, "Муфта — конец линии: уходов нет, править можно только приход."));
+}
+
+/** Самопроверка (хвосты с замером) и схема разварки. */
+function spliceBlock(p, s, n, nr, f) {
+  if (!nr || nr.input == null) return;
+  const list = nr.splice ? tails(nr.input, nr.splice) : [{ label: "Вход в муфту", level: nr.input }];
+  p.append(h("h4", {}, "Описание муфты — самопроверка"));
+  const t = h("table", { class: "tails" }, h("tr", {}, h("th", {}, "№"), h("th", {}, "Хвост"), h("th", {}, "Должно"), h("th", {}, "Замер"), h("th", {}, "Разница")));
+  list.forEach((x, i) => {
+    const diff = h("td", {});
+    t.append(h("tr", {}, h("td", {}, String(i + 1)), h("td", {}, x.label), h("td", { class: "b" }, dbm(x.level)),
+      h("td", {}, h("input", { style: "width:70px", placeholder: "замер", oninput: e => {
+        const v = num(e.target.value);
+        diff.textContent = v == null ? "" : (v - x.level >= 0 ? "+" : "") + (v - x.level).toFixed(1);
+        diff.style.color = v == null ? "" : Math.abs(v - x.level) <= 1 ? "var(--ok)" : "var(--bad)";
+      } })), diff));
+  });
+  p.append(t);
+  if (nr.splice) { p.append(h("h4", {}, "Что куда варить")); p.append(h("div", { class: "splice" }, h("div", { class: "sub" }, `Вход ${dbm(nr.input)} дБм ─▶`), spliceView(s, nr.splice, f))); }
+}
+
+function spliceView(s, sp, f) {
+  if (sp.t === "abon") return h("span", { class: "leaf", style: `color:${levelColor(s, sp.out)}` }, `абонентский ${sp.plc}${sp.index > 0 ? " №" + sp.index : ""} → ${dbm(sp.out)} дБм`);
+  if (sp.t === "exit") return h("span", { class: "leaf" }, "→ " + sp.target + (s.multi && f && sp.id != null ? ` по ${fiberShort(physOn(s, sp.id, f))}` : ""));
+  const two = sp.name === "1x2";
+  return h("div", { class: "split" },
+    h("div", { class: "box" + (sp.trim ? " trim" : "") }, h("b", {}, (sp.trim ? "отщип " : "") + sp.name), h("div", { class: "sub" }, "вход " + dbm(sp.level))),
+    h("div", { class: "outs" },
+      h("div", { class: "port" }, h("span", { class: "sub" }, `─ ${two ? "выход 1" : "отвод"} ${sp.tapPct} (${dbm(sp.level - sp.tapLoss)}) ─▶ `), spliceView(s, sp.tapOut, f)),
+      h("div", { class: "port" }, h("span", { class: "sub" }, `─ ${two ? "выход 2" : "проход"} ${sp.thruPct} (${dbm(sp.level - sp.thruLoss)}) ─▶ `), spliceView(s, sp.thruOut, f))));
+}
+
+function trimBlock(p, s, n, nr, auto, current, set) {
+  const trim = nr && nr.trim, hint = nr && nr.trimHint;
+  if (!trim && !hint && !current) return;
+  const box = h("div", { class: "card" }, h("b", {}, "Отщип лишнего"));
+  if (trim) box.append(h("div", {}, trimText(trim) + (current ? " — выставлен вручную" : " — подобран автоматически")));
+  else if (current === "none") box.append(h("div", {}, "Отключён" + (hint ? ` (можно: ${trimText(hint)})` : "")));
+  else if (hint) box.append(h("div", {}, "Сигнала больше нужного. Можно поставить " + trimText(hint)));
+  const row = h("div", { class: "row" });
+  if (hint && !trim) row.append(h("button", { onclick: () => set(auto ? null : hint.code) }, "Поставить"));
+  if (trim) row.append(h("button", { onclick: () => set("none") }, "Без отщипа"));
+  if (current && auto) row.append(h("button", { onclick: () => set(null) }, "Авто"));
+  if (current && current !== "none" && !auto) row.append(h("button", { onclick: () => set(null) }, "Убрать"));
+  const input = nr && nr.input != null ? nr.input : s.input;
+  const w = wanted(nr, s);
+  row.append(h("button", { onclick: () => pickDialog("Отщип перед " + n.name, COUPLERS.flatMap(c => (c.name === "1x2" ? [false] : [false, true]).map(onTap => {
+    const t = trimOf(c, onTap, input);
+    const ok = w && t.line >= w[0] && t.line <= w[1];
+    return [`${c.name}: в линию ${c.name === "1x2" ? "" : onTap ? "отвод " : "проход "}${dbm(t.line)}, запас ${dbm(t.reserve)} дБм${c.common ? "  ★" : ""}`, () => set(t.code), ok];
+  }))) }, "Выбрать свой"));
+  box.append(row);
+  p.append(box);
+}
+
+// ---------- Окна ----------
+function dialog(title, body, buttons) {
+  const d = h("dialog", { class: "dlg" }, h("h3", {}, title), body, h("div", { class: "row end" }, buttons(() => { d.close(); d.remove(); })));
+  document.body.append(d);
+  d.showModal();
+  d.addEventListener("close", () => d.remove());
+  return d;
+}
+function pickDialog(title, items) {
+  dialog(title, h("div", { class: "pick" }, items.map(([text, act, hl]) => h("div", { class: "opt" + (hl ? " hl" : ""), onclick: () => { act(); document.querySelector("dialog.dlg").close(); } }, text))),
+    close => [h("button", { onclick: close }, "Отмена")]);
+}
+function settingsDialog() {
+  const s = cur();
+  const t = h("input", { value: s.title }), hi = h("input", { value: dbm(s.high), style: "width:70px" }), lo = h("input", { value: dbm(s.low), style: "width:70px" });
+  const cm = h("input", { type: "checkbox" }); cm.checked = !!s.common;
+  dialog("Настройки схемы", h("div", {},
+    h("label", { class: "fld" }, "Название", t),
+    h("div", { class: "row" }, h("label", { class: "fld" }, "Цель от, дБм", hi), h("label", { class: "fld" }, "до, дБм", lo)),
+    h("label", { class: "row" }, cm, "Только ходовые делители (5/95, 10/90 … 50/50, 1x2)"),
+    h("div", { class: "sub" }, "Потери — из таблицы 123.xlsx: только делители, без кабеля и сварок.")),
+    close => [h("button", { onclick: close }, "Отмена"), h("button", { class: "primary", onclick: () => {
+      const a = num(lo.value) ?? s.low, b = num(hi.value) ?? s.high;
+      update(sc => ({ ...sc, title: t.value.trim(), low: Math.min(a, b), high: Math.max(a, b), common: cm.checked })); close();
+    } }, "Сохранить")]);
+}
+const TPL_KEY = "pon_cable_templates_v1";
+/** Встроенный шаблон (модуль 4 вол.: кр, зел, син, кор) и свои, сохранённые в браузере. */
+function cableTemplates() {
+  let own = [];
+  try { own = JSON.parse(localStorage.getItem(TPL_KEY) || "[]"); } catch (e) { own = []; }
+  return [{ name: "модуль 4: кр зел син кор", colors: [0, 3, 5, 8], builtin: true }, ...own];
+}
+function saveCableTemplates(list) { try { localStorage.setItem(TPL_KEY, JSON.stringify(list)); } catch (e) { /* хранилище недоступно */ } }
+
+function fibersDialog(s, all) {
+  let cable = s.cable;
+  const pal = JSON.parse(JSON.stringify(Object.assign({}, DEFAULT_CABLE, s.palette || {})));
+  // Значение — сигнал, дБм, или «LOW»: волокно в кабеле есть, сигнала нет, свободное
+  const used = new Map((s.multi ? s.fibers || [] : activeFibers(s)).map(f => [f.n, f.low ? "LOW" : dbm(f.input)]));
+  const body = h("div", {});
+  const setCableN = k => { cable = Math.max(1, Math.min(288, k | 0)); [...used.keys()].filter(x => x > cable).forEach(x => used.delete(x)); };
+  const draw = () => {
+    setCable(pal);
+    body.replaceChildren(h("div", { class: "sub" }, "Волокон в кабеле"),
+      h("div", { class: "row wrap" }, [1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 144].map(k => h("button", { class: "chip" + (cable === k ? " on" : ""), onclick: () => { setCableN(k); draw(); } }, String(k))),
+        h("input", { value: cable, style: "width:60px", title: "своё число", onchange: e => { const v = parseInt(e.target.value); if (v > 0) { setCableN(v); draw(); } } })),
+      // Палитра: какие цвета есть в кабеле (порядок — кр, ор, жел, зел, гол, син, фио, чер, кор, сер, роз, бел, нат)
+      // Цвета и их порядок — у разных кабелей разные: снять/добавить цвет, стрелками — переставить
+      h("div", { class: "sub" }, "Цвета волокон в этом кабеле: щелчок — убрать/добавить (добавленный встаёт в конец):"),
+      h("div", { class: "row wrap" }, FIBER_SHORT.map((c, i) => h("button", { class: "chip" + (pal.colors.includes(i) ? " on" : ""), onclick: () => {
+        pal.colors = pal.colors.includes(i) ? pal.colors.filter(x => x !== i) : [...pal.colors, i];
+        if (!pal.colors.length) pal.colors = [i];
+        draw();
+      } }, h("span", { class: "dot", style: `background:${FIBER_RGB[i]}` }), c))),
+      h("div", { class: "sub" }, "Порядок в кабеле (№1, №2, …):"),
+      h("div", { class: "row wrap" }, pal.colors.map((ci, k) => h("span", { class: "chip", style: "cursor:default" },
+        k > 0 ? h("button", { class: "mini", onclick: () => { const c = pal.colors; [c[k - 1], c[k]] = [c[k], c[k - 1]]; draw(); } }, "◀") : null,
+        h("span", { class: "dot", style: `background:${FIBER_RGB[ci]}` }), `${k + 1}. ${FIBER_SHORT[ci]}`,
+        k < pal.colors.length - 1 ? h("button", { class: "mini", onclick: () => { const c = pal.colors; [c[k], c[k + 1]] = [c[k + 1], c[k]]; draw(); } }, "▶") : null)),
+        h("button", { class: "mini", onclick: () => { pal.colors = [...DEFAULT_CABLE.colors]; draw(); } }, "как обычно")),
+      // Шаблоны кабелей: встроенный 4-волоконный модуль и свои, запомненные (в этом браузере)
+      h("div", { class: "row wrap" }, h("span", { class: "sub" }, "Шаблоны:"),
+        cableTemplates().map((t, i) => h("span", { class: "chip", style: "cursor:default" },
+          h("button", { class: "mini", onclick: () => {
+            // Встроенный — только цвета модуля (модули не трогаем), свой — весь кабель
+            if (t.builtin) { pal.colors = [...t.colors]; if (pal.modules > 1) { pal.perModule = t.colors.length; setCableN(pal.modules * pal.perModule); } }
+            else {
+              Object.assign(pal, { colors: [...t.colors], modules: t.modules || 1, perModule: t.perModule || 8, moduleColors: [...(t.moduleColors || DEFAULT_CABLE.moduleColors)] });
+              if (t.cable) setCableN(t.cable);
+            }
+            draw();
+          } }, t.name),
+          t.builtin ? null : h("button", { class: "mini danger", title: "удалить шаблон", onclick: () => { saveCableTemplates(cableTemplates().filter((_, j) => j !== i && !cableTemplates()[j].builtin)); draw(); } }, "×"))),
+        // Название шаблона — полем прямо здесь (системные окна ввода в браузере телефона/claude.ai не работают)
+        (() => {
+          const nm = h("input", { id: "tplName", value: `${cable} вол.` + (pal.modules > 1 ? `, ${pal.modules}×${pal.perModule}` : ""), style: "width:150px" });
+          return h("span", { class: "row" }, nm, h("button", { class: "mini", onclick: () => {
+            const name = nm.value.trim(); if (!name) return;
+            saveCableTemplates([...cableTemplates().filter(t => !t.builtin), { name, cable, colors: [...pal.colors], modules: pal.modules, perModule: pal.perModule, moduleColors: [...pal.moduleColors] }]);
+            draw();
+          } }, "Запомнить как шаблон"));
+        })()),
+      // Модули × волокон в модуле = волокон в кабеле (например, 16 = 4 модуля по 4)
+      h("div", { class: "row wrap" }, h("span", { class: "sub" }, "Модулей:"),
+        [1, 2, 3, 4, 6, 8, 12].map(k => h("button", { class: "chip" + (pal.modules === k ? " on" : ""), onclick: () => { pal.modules = k; if (k > 1) setCableN(k * pal.perModule); draw(); } }, String(k))),
+        h("input", { value: pal.modules, style: "width:46px", title: "своё число", onchange: e => { const v = parseInt(e.target.value); if (v > 0) { pal.modules = v; if (v > 1) setCableN(v * pal.perModule); draw(); } } })),
+      pal.modules > 1 ? h("div", { class: "row wrap" }, h("span", { class: "sub" }, "Волокон в модуле:"),
+        [2, 4, 6, 8, 12, 24].map(k => h("button", { class: "chip" + (pal.perModule === k ? " on" : ""), onclick: () => { pal.perModule = k; setCableN(pal.modules * k); draw(); } }, String(k))),
+        h("input", { value: pal.perModule, style: "width:46px", title: "своё число", onchange: e => { const v = parseInt(e.target.value); if (v > 0) { pal.perModule = v; setCableN(pal.modules * v); draw(); } } }),
+        h("span", { class: "sub" }, ` = ${pal.modules * pal.perModule} вол.`)) : "",
+      pal.modules > 1 ? h("div", {}, h("div", { class: "sub" }, "Цвета модулей по порядку (дальше — как последний):"),
+        h("div", { class: "row wrap" }, Array.from({ length: pal.modules }, (_, m) => h("select", { onchange: e => {
+          while (pal.moduleColors.length <= m) pal.moduleColors.push(pal.moduleColors[pal.moduleColors.length - 1] ?? 11);
+          pal.moduleColors[m] = Number(e.target.value); draw();
+        } }, FIBER_SHORT.map((c, i) => { const o = h("option", { value: i }, `${m + 1}: ${c}`); if (moduleColorList()[m] === i) o.selected = true; return o; }))))) : "",
+      h("div", { class: "sub" }, "Отметьте волокна в работе и укажите, сколько на каждое приходит, дБм. «LOW» — сигнала нет, волокно свободное (идёт транзитом, его можно переварить)."));
+    for (let n = 1; n <= cable; n++) {
+      const on = used.has(n), isLow = on && /^low$/i.test(String(used.get(n)).trim());
+      const cnt = s.nodes.filter(x => x.parent != null && fiberOfNode(x) === n).length;
+      const cb = h("input", { type: "checkbox", onchange: e => { if (e.target.checked) used.set(n, "-5.0"); else if (used.size > 1) used.delete(n); draw(); } });
+      cb.checked = on;
+      body.append(h("div", { class: "row" }, cb, h("span", { class: "dot", style: `background:${fiberRgb(n)}` }),
+        h("span", { style: "flex:1" }, `№${n} ${fiberShort(n)} — ${fiberColorName(n)}`, cnt ? h("span", { class: "sub", style: on && !isLow ? "" : "color:var(--bad)" }, ` · муфт ${cnt}` + (all[n] ? ` · желаемый вход ${dbm(all[n].needLow)}…${dbm(all[n].needHigh)}` : "")) : null),
+        on ? h("input", { value: used.get(n), style: "width:70px", oninput: e => used.set(n, e.target.value) }) : null,
+        h("button", { class: "chip" + (isLow ? " on" : ""), title: "нет сигнала, волокно запасное/свободное", onclick: () => { if (isLow) used.delete(n); else used.set(n, "LOW"); draw(); } }, "LOW")));
+    }
+  };
+  draw();
+  dialog("Кабель и волокна", body, close => [h("button", { onclick: () => { close(); render(); } }, "Отмена"), h("button", { class: "primary", onclick: () => {
+    const list = [...used.entries()].sort((a, b) => a[0] - b[0]).map(([n, v]) => /^low$/i.test(String(v).trim())
+      ? { n, input: null, low: true }
+      : { n, input: num(v) ?? -5, trim: ((s.fibers || []).find(f => f.n === n) || {}).trim || null });
+    update(sc => ({ ...sc, cable, palette: pal, fibers: list.length ? list : [{ n: 1, input: -5 }] })); close();
+  } }, "Сохранить")]);
+}
+
+// ---------- Выгрузка, файлы ----------
+// Страница по ссылке claude.ai: сохранять файл можно только через платформу (она спросит подтверждение)
+let DL = null;
+try { if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { DL = d; }).catch(() => {}); } catch (e) { /* открыта как обычный файл */ }
+
+function download(blob, name) {
+  if (DL) { DL.save({ filename: name, data: blob }).catch(() => {}); return; }
+  // Телефон (iPhone/Android): сразу «Поделиться» — в Telegram, WhatsApp, Файлы; ПК — обычное скачивание
+  if (COARSE && navigator.canShare) {
+    const file = new File([blob], name, { type: blob.type || "application/octet-stream" });
+    if (navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: name }).catch(() => {}); return; }
+  }
+  const a = h("a", { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+/** Копировать текст: в обработчике нажатия; не вышло — выделяем, чтобы скопировать вручную. */
+function copyText(text, el) {
+  const sel = () => { if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } };
+  try { navigator.clipboard.writeText(text).catch(sel); } catch (e) { sel(); }
+}
+const safeName = s => (s.title || "схема").replace(/[^\p{L}\d]+/gu, "_");
+
+$("btnNew").onclick = () => {
+  const t = h("input", { placeholder: "адрес, линия" });
+  let multi = false;
+  const kind = h("div", { class: "row" });
+  const drawKind = () => kind.replaceChildren(
+    h("button", { class: "chip" + (!multi ? " on" : ""), onclick: () => { multi = false; drawKind(); } }, "Простая"),
+    h("button", { class: "chip" + (multi ? " on" : ""), onclick: () => { multi = true; drawKind(); } }, "Сложная (кабель, волокна)"));
+  drawKind();
+  dialog("Новая схема", h("div", {}, h("label", { class: "fld" }, "Название", t), kind,
+    h("div", { class: "sub" }, "Сложная — кабель с несколькими волокнами: у каждого свой вход, муфты привязываются к волокну.")),
+    close => [h("button", { onclick: close }, "Отмена"), h("button", { class: "primary", onclick: () => { close(); newScheme(t.value.trim(), multi); } }, "Создать")]);
+};
+$("btnSettings").onclick = () => cur() && settingsDialog();
+$("btnFit").onclick = () => { const s = cur(); if (s) { fitView(s); render(); } };
+$("btnBack").onclick = () => { ui.open = null; ui.selected = null; ui.edge = null; ui.note = null; render(); };
+$("mode").onclick = () => { ui.addMode = ui.addMode === "node" ? "" : "node"; render(); };
+$("noteMode").onclick = () => { ui.addMode = ui.addMode === "note" ? "node" : "note"; render(); };
+$("fact").onclick = () => update(s => ({ ...s, fact: !s.fact }));
+$("tabMap").onclick = () => { ui.tab = "map"; render(); };
+$("tabParts").onclick = () => { ui.tab = "parts"; render(); };
+$("btnText").onclick = () => {
+  const s = cur(); if (!s) return;
+  const text = textAll(s, calcAll(s));
+  const pre = h("pre", { class: "txt" }, text);
+  copyText(text, pre);
+  dialog("Расчёт текстом (скопирован)", pre, close => [
+    h("a", { class: "btn", href: "https://t.me/share/url?url=%20&text=" + encodeURIComponent(text.slice(0, 3500)), target: "_blank", rel: "noopener" }, "Открыть в Telegram"),
+    h("button", { onclick: () => copyText(text, pre) }, "Копировать"),
+    h("button", { class: "primary", onclick: close }, "Закрыть")]);
+};
+$("btnExcel").onclick = () => { const s = cur(); if (s) download(xlsxAll(s, calcAll(s)), `PON_${safeName(s)}.xlsx`); };
+// Сохранить схему: файлом (.pon.json) или текстом — его можно переслать сообщением и вставить на другом устройстве
+$("btnSave").onclick = () => {
+  const s = cur(); if (!s) return;
+  const json = JSON.stringify(s);
+  const box = h("textarea", { id: "schemeOut", rows: 6, style: "width:100%", readonly: true }, json);
+  dialog("Сохранить схему", h("div", {},
+    h("div", { class: "sub" }, "Файлом — откроется на ПК, на Android (приложение) и здесь кнопкой «Открыть». Текстом — скопируйте и перешлите сообщением; на другом устройстве: «Открыть» → вставить текст."),
+    box), close => [
+    h("button", { onclick: () => { box.select(); copyText(json, null); } }, "Копировать текст"),
+    h("button", { class: "primary", onclick: () => { download(new Blob([JSON.stringify(s, null, 1)], { type: "application/json" }), `PON_${safeName(s)}.pon.json`); close(); } }, "Файлом"),
+    h("button", { onclick: close }, "Закрыть")]);
+};
+/** Добавить схемы из текста файла .pon.json; возвращает, сколько добавлено. */
+function importSchemes(text) {
+  const data = JSON.parse(String(text).replace(/^﻿/, "").trim());
+  let k = 0;
+  for (const s of Array.isArray(data) ? data : [data]) {
+    if (!s || !s.nodes) continue;
+    s.id = Date.now() + Math.floor(Math.random() * 1000) + k++;
+    schemes.push(s); ui.open = s.id; ui.selected = null; ui.edge = null; ui.note = null; ui.fit = true; ui.tab = "map";
+  }
+  if (k) save();
+  return k;
+}
+$("btnOpen").onclick = () => {
+  const ta = h("textarea", { id: "schemeIn", rows: 5, style: "width:100%", placeholder: "или вставьте сюда текст схемы" });
+  const err = h("div", { class: "sub", style: "color:var(--bad)" });
+  dialog("Открыть схему", h("div", {}, h("div", { class: "sub" }, "Файл .pon.json с ПК, Android или из Telegram (на iPhone — из «Файлов»)."), ta, err), close => [
+    h("button", { class: "primary", onclick: () => { close(); $("file").click(); } }, "Выбрать файл"),
+    h("button", { onclick: () => {
+      try { if (importSchemes(ta.value)) { close(); render(); } else err.textContent = "В тексте нет схемы."; }
+      catch (e) { err.textContent = "Не похоже на схему: " + e.message; }
+    } }, "Открыть текст"),
+    h("button", { onclick: close }, "Отмена")]);
+};
+$("file").onchange = async e => {
+  const bad = [];
+  for (const f of e.target.files) {
+    try { if (!importSchemes(await f.text())) bad.push(f.name + ": нет схемы"); } catch (err) { bad.push(f.name + ": " + err.message); }
+  }
+  e.target.value = ""; render();
+  if (bad.length) dialog("Не удалось открыть", h("div", {}, bad.map(x => h("div", {}, x))), close => [h("button", { class: "primary", onclick: close }, "Понятно")]);
+};
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && ui.linking != null) { ui.linking = null; ui.linkErr = false; render(); return; }
+  if (e.key === "Delete" && document.activeElement.tagName !== "INPUT") {
+    const s = cur(), n = s && s.nodes.find(x => x.id === ui.selected);
+    if (n && n.parent != null) { update(sc => ({ ...sc, nodes: sc.nodes.filter(x => x.id !== n.id).map(x => x.parent === n.id ? { ...x, parent: n.parent } : x) })); ui.selected = null; render(); }
+  }
+});
+render();
+
+</script>
+</body>
+</html>
